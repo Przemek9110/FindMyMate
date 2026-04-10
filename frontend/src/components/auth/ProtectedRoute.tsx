@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
-export default function ProfilePage() {
+type ProtectedRouteProps = {
+  children: ReactNode;
+};
+
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push("/login");
+      router.replace("/login");
     }
   }, [isAuthenticated, router]);
 
@@ -19,11 +22,5 @@ export default function ProfilePage() {
     return null;
   }
 
-  return (
-     <ProtectedRoute>
-      <div>
-        <h1>Profile Page</h1>
-      </div>
-    </ProtectedRoute>
-  );
+  return <>{children}</>;
 }

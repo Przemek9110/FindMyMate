@@ -1,26 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
-export default function ChatPage() {
+type GuestRouteProps = {
+  children: ReactNode;
+};
+
+export function GuestRoute({ children }: GuestRouteProps) {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
+    if (isAuthenticated) {
+      router.replace("/discover");
     }
   }, [isAuthenticated, router]);
 
-  if (!isAuthenticated) {
+  if (isAuthenticated) {
     return null;
   }
 
- return (
-    <div>
-      <h1>Chat Page</h1>
-    </div>
-  );
+  return <>{children}</>;
 }
