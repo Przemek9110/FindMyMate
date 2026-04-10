@@ -12,6 +12,7 @@ type ProfileFormProps = {
   profile: Profile;
   onSave: (updatedProfile: Profile) => void | Promise<void>;
   onCancel: () => void;
+  isSaving: boolean;
 };
 
 type FormErrors = {
@@ -23,6 +24,7 @@ export function ProfileForm({
   profile,
   onSave,
   onCancel,
+  isSaving,
 }: ProfileFormProps) {
   const [bio, setBio] = useState(profile.bio);
   const [interests, setInterests] = useState(profile.interests.join(", "));
@@ -54,6 +56,8 @@ export function ProfileForm({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isSaving) return;
 
     if (!validateForm()) {
       return;
@@ -88,12 +92,11 @@ export function ProfileForm({
               }
             }}
             rows={5}
-            className="w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-2"
+            disabled={isSaving}
+            className="w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="Napisz coś o sobie..."
           />
-          {errors.bio && (
-            <p className="text-sm text-red-500">{errors.bio}</p>
-          )}
+          {errors.bio && <p className="text-sm text-red-500">{errors.bio}</p>}
         </div>
 
         <div className="space-y-2">
@@ -110,7 +113,8 @@ export function ProfileForm({
                 setErrors((prev) => ({ ...prev, interests: undefined }));
               }
             }}
-            className="w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-2"
+            disabled={isSaving}
+            className="w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="Np. React, muzyka, podróże"
           />
           <p className="text-xs text-muted-foreground">
@@ -124,15 +128,17 @@ export function ProfileForm({
         <div className="flex flex-wrap gap-3">
           <button
             type="submit"
-            className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+            disabled={isSaving}
+            className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Zapisz
+            {isSaving ? "Zapisywanie..." : "Zapisz"}
           </button>
 
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+            disabled={isSaving}
+            className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
             Anuluj
           </button>
