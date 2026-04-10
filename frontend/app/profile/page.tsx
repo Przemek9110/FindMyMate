@@ -1,23 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileDetails } from "@/components/profile/profile-details";
 import { InterestTags } from "@/components/profile/interest-tags";
 import { ProfileForm } from "@/components/profile/profile-form";
+import { getProfile, updateProfile } from "@/lib/api/profile";
 
-const mockProfile = {
-  username: "AniaTravel",
-  bio: "Uwielbiam podróże, fotografię i poznawanie nowych ludzi. Szukam osób do wspólnych wypadów i projektów.",
-  interests: ["Podróże", "Fotografia", "Kultura", "Joga", "Kawiarnie"],
+type Profile = {
+  username: string;
+  bio: string;
+  interests: string[];
 };
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState(mockProfile);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleSave = (updatedProfile: typeof profile) => {
-    setProfile(updatedProfile);
+  useEffect(() => {
+    async function loadProfile() {
+      const data = await getProfile();
+      setProfile(data);
+    }
+
+    loadProfile();
+  }, []);
+
+  const handleSave = async (updatedProfile: Profile) => {
+    const data = await updateProfile(updatedProfile);
+    setProfile(data);
     setIsEditing(false);
   };
 
@@ -28,6 +39,10 @@ export default function ProfilePage() {
   const handleEdit = () => {
     setIsEditing(true);
   };
+
+  if (!profile) {
+    return <p className="p-6">Ładowanie...</p>;
+  }
 
   return (
     <main className="min-h-screen bg-background px-4 py-8">
