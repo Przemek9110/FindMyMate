@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
 import { register } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
+import { GuestRoute } from "@/components/auth/GuestRoute";
 
 import {
   Card,
@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 export default function RegisterPage() {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -64,7 +65,15 @@ export default function RegisterPage() {
     }
   };
 
+  
+    useEffect(() => {
+      if (isAuthenticated) {
+        router.push("/discover");
+      }
+    }, [isAuthenticated, router]);
+
   return (
+    <GuestRoute>
     <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2">
@@ -131,5 +140,6 @@ export default function RegisterPage() {
         </CardContent>
       </Card>
     </div>
+    </GuestRoute>
   );
 }
