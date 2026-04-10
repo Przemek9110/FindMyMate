@@ -1,9 +1,16 @@
 type ProfileHeaderProps = {
   username: string;
   bio: string;
+  onEdit: () => void;
+  isEditing: boolean;
 };
 
-export function ProfileHeader({ username, bio }: ProfileHeaderProps) {
+export function ProfileHeader({
+  username,
+  bio,
+  onEdit,
+  isEditing,
+}: ProfileHeaderProps) {
   return (
     <section className="rounded-2xl border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -20,12 +27,15 @@ export function ProfileHeader({ username, bio }: ProfileHeaderProps) {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-        >
-          Edytuj profil
-        </button>
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+          >
+            Edytuj profil
+          </button>
+        )}
       </div>
     </section>
   );
