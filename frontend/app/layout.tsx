@@ -39,7 +39,6 @@ export default function RootLayout({
         </main>
 
         <Footer />
-        <Footer />
         <ChatDock />
       </body>
     </html>

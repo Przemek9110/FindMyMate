@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileDetails } from "@/components/profile/profile-details";
@@ -20,24 +20,25 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const data = await getProfile();
+      setProfile(data);
+    } catch {
+      setError("Nie udało się pobrać profilu.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadProfile() {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const data = await getProfile();
-        setProfile(data);
-      } catch {
-        setError("Nie udało się pobrać profilu.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     loadProfile();
-  }, []);
+  }, [loadProfile]);
 
   const handleSave = async (updatedProfile: Profile) => {
     try {
@@ -48,6 +49,8 @@ export default function ProfilePage() {
       setProfile(data);
       setIsEditing(false);
       setError(null);
+      setSuccessMessage("Profil zapisany");
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch {
       setError("Nie udało się zapisać zmian.");
     } finally {
@@ -67,7 +70,7 @@ export default function ProfilePage() {
   };
 
   const handleRetry = () => {
-    window.location.reload();
+    loadProfile();
   };
 
   return (
@@ -101,6 +104,12 @@ export default function ProfilePage() {
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {error}
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                {successMessage}
               </div>
             )}
 

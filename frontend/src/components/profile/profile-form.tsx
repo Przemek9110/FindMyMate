@@ -93,10 +93,18 @@ export function ProfileForm({
             }}
             rows={5}
             disabled={isSaving}
-            className="w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-invalid={Boolean(errors.bio)}
+            aria-describedby={errors.bio ? "bio-error" : undefined}
+            className={`w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+              errors.bio ? "border-red-500" : ""
+            }`}
             placeholder="Napisz coś o sobie..."
           />
-          {errors.bio && <p className="text-sm text-red-500">{errors.bio}</p>}
+          {errors.bio && (
+            <p id="bio-error" className="text-sm text-red-500">
+              {errors.bio}
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -114,14 +122,20 @@ export function ProfileForm({
               }
             }}
             disabled={isSaving}
-            className="w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-invalid={Boolean(errors.interests)}
+            aria-describedby={errors.interests ? "interests-error" : undefined}
+            className={`w-full rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+              errors.interests ? "border-red-500" : ""
+            }`}
             placeholder="Np. React, muzyka, podróże"
           />
           <p className="text-xs text-muted-foreground">
             Oddziel zainteresowania przecinkami.
           </p>
           {errors.interests && (
-            <p className="text-sm text-red-500">{errors.interests}</p>
+            <p id="interests-error" className="text-sm text-red-500">
+              {errors.interests}
+            </p>
           )}
         </div>
 

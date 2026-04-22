@@ -9,9 +9,14 @@ type MatchCardProps = {
   onClick: () => void;
 };
 
-export function MatchCard({ username, interests, onClick }: MatchCardProps) {
+export function MatchCard({ id, username, interests, onClick }: MatchCardProps) {
   return (
-    <button onClick={onClick} className="w-full text-left">
+    <button
+      onClick={onClick}
+      aria-label={`Otwórz rozmowę z ${username}`}
+      className="w-full rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      data-match-id={id}
+    >
       <Card className="transition hover:shadow-md">
         <CardContent className="flex items-center gap-4 p-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-semibold">

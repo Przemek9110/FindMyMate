@@ -3,7 +3,7 @@ type DiscoverUser = {
   username: string;
   bio: string;
   interests: string[];
-  likedYou: boolean;
+  incomingReaction: "like" | "pass" | "none";
 };
 
 type ReactionType = "like" | "pass";
@@ -14,21 +14,28 @@ const mockUsers: DiscoverUser[] = [
     username: "AniaTravel",
     bio: "Uwielbiam podróże i fotografię. Szukam osób do wspólnych wypadów.",
     interests: ["Podróże", "Fotografia", "Kultura"],
-    likedYou: true,
+    incomingReaction: "like",
   },
   {
     id: "2",
     username: "CodeNina",
     bio: "Frontend dev, UI/UX lover. Minimalizm i dobre projekty to moje życie.",
     interests: ["React", "Design", "Figma"],
-    likedYou: false,
+    incomingReaction: "none",
   },
   {
     id: "3",
     username: "MarekFit",
     bio: "Lubię aktywny tryb życia, siłownię i dobre jedzenie.",
     interests: ["Siłownia", "Dietetyka", "Podróże"],
-    likedYou: true,
+    incomingReaction: "like",
+  },
+  {
+    id: "4",
+    username: "Towarek",
+    bio: "Lubię aktywny tryb życia, siłownię i dobre jedzenie.",
+    interests: ["Siłownia", "Dietetyka", "Podróże"],
+    incomingReaction: "pass",
   },
 ];
 

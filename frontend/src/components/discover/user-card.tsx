@@ -10,9 +10,16 @@ type UserCardProps = {
     onLike: () => void;
     onPass: () => void;
     sharedInterests: string[];
+    disabled?: boolean;
 };
 
-export function UserCard({ user, onLike, onPass, sharedInterests }: UserCardProps) {
+export function UserCard({
+    user,
+    onLike,
+    onPass,
+    sharedInterests,
+    disabled = false,
+}: UserCardProps) {
     return (
         <section className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-4">
@@ -59,7 +66,8 @@ export function UserCard({ user, onLike, onPass, sharedInterests }: UserCardProp
                 <button
                     type="button"
                     onClick={onPass}
-                    className="flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                    disabled={disabled}
+                    className="flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Pass
                 </button>
@@ -67,7 +75,8 @@ export function UserCard({ user, onLike, onPass, sharedInterests }: UserCardProp
                 <button
                     type="button"
                     onClick={onLike}
-                    className="flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                    disabled={disabled}
+                    className="flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Like
                 </button>
