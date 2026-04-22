@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/api/auth";
@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const [formData, setFormData] = useState({
@@ -60,13 +59,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/discover");
-    }
-  }, [isAuthenticated, router]);
-
 
   return (
     <GuestRoute>
