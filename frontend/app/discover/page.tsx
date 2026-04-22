@@ -3,19 +3,21 @@
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { getProfile, type Profile } from "@/lib/api/profile";
+import { useDiscoverStore } from "@/store/discoverStore";
+import { useMatchesStore } from "@/store/matchesStore";
 import { UserCard } from "@/components/discover/user-card";
 import {
   getDiscoverUsers,
   sendReaction,
   type DiscoverUser,
-  type ReactionType,
 } from "@/lib/api/discover";
 
 export default function DiscoverPage() {
   const [users, setUsers] = useState<DiscoverUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [seenUserIds, setSeenUserIds] = useState<string[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const { reactedUserIds, addReaction } = useDiscoverStore();
+  const { addMatch, isMatched } = useMatchesStore();
 
   useEffect(() => {
     async function loadData() {
@@ -35,37 +37,37 @@ export default function DiscoverPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    async function loadUsers() {
-      try {
-        const data = await getDiscoverUsers();
-        setUsers(data);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadUsers();
-  }, []);
-
-  const availableUsers = users.filter(
-    (user) => !seenUserIds.includes(user.id)
-  );
-
+  const availableUsers = users.filter((user) => !reactedUserIds.includes(user.id));
   const currentUser = availableUsers[0];
 
   const sharedInterests =
     currentUser && profile
       ? currentUser.interests.filter((interest) =>
-        profile.interests.includes(interest)
-      )
+          profile.interests.includes(interest)
+        )
       : [];
 
-  const handleReaction = async (reaction: ReactionType) => {
-    if (!currentUser) return;
+  const handleLike = async (user: DiscoverUser) => {
+    try {
+      await sendReaction(user.id, "like");
 
-    await sendReaction(currentUser.id, reaction);
-    setSeenUserIds((prev) => [...prev, currentUser.id]);
+      if (user.likedYou && !isMatched(user.id)) {
+        addMatch(user);
+      }
+
+      addReaction(user.id);
+    } catch (error) {
+      console.error("Błąd podczas wysyłania reakcji:", error);
+    }
+  };
+
+  const handlePass = async (user: DiscoverUser) => {
+    try {
+      await sendReaction(user.id, "pass");
+      addReaction(user.id);
+    } catch (error) {
+      console.error("Błąd podczas wysyłania reakcji:", error);
+    }
   };
 
   return (
@@ -83,14 +85,14 @@ export default function DiscoverPage() {
           ) : currentUser ? (
             <UserCard
               user={currentUser}
-              onLike={() => handleReaction("like")}
-              onPass={() => handleReaction("pass")}
+              onLike={() => handleLike(currentUser)}
+              onPass={() => handlePass(currentUser)}
               sharedInterests={sharedInterests}
             />
           ) : (
             <div className="rounded-2xl border bg-card p-6 shadow-sm">
               <p className="text-sm text-muted-foreground">
-                Brak użytkowników do wyświetlenia.
+                Spróbuj później ponownie albo poszerz swoje zainteresowania, aby zobaczyć więcej dopasowań.
               </p>
             </div>
           )}
