@@ -3,6 +3,7 @@ type DiscoverUser = {
   username: string;
   bio: string;
   interests: string[];
+  likedYou: boolean;
 };
 
 type ReactionType = "like" | "pass";
@@ -13,18 +14,21 @@ const mockUsers: DiscoverUser[] = [
     username: "AniaTravel",
     bio: "Uwielbiam podróże i fotografię. Szukam osób do wspólnych wypadów.",
     interests: ["Podróże", "Fotografia", "Kultura"],
+    likedYou: true,
   },
   {
     id: "2",
     username: "CodeNina",
     bio: "Frontend dev, UI/UX lover. Minimalizm i dobre projekty to moje życie.",
     interests: ["React", "Design", "Figma"],
+    likedYou: false,
   },
   {
     id: "3",
     username: "MarekFit",
     bio: "Lubię aktywny tryb życia, siłownię i dobre jedzenie.",
     interests: ["Siłownia", "Dietetyka", "Podróże"],
+    likedYou: true,
   },
 ];
 
