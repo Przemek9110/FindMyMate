@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useMatchesStore } from "./matchesStore";
+import { useDiscoverStore } from "./discoverStore";
 
 type User = {
   id: string;
@@ -29,15 +31,21 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
         }),
 
-      logout: () =>
+      logout: () => {
+        useMatchesStore.getState().clearMatches();
+        useDiscoverStore.getState().clearReactions();
+
+        localStorage.removeItem("auth-storage");
+
         set({
           user: null,
           token: null,
           isAuthenticated: false,
-        }),
+        });
+      },
     }),
     {
       name: "auth-storage",
-    }
-  )
+    },
+  ),
 );
