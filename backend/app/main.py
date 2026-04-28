@@ -15,6 +15,8 @@ from app.core.security import hash_password
 from app.models.interest import Interest
 from app.models.profile_interest import ProfileInterest
 from app.schemas.interest import InterestCreate, ProfileInterestCreate
+from app.models.reaction import Reaction
+from app.schemas.reaction import ReactionCreate
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
