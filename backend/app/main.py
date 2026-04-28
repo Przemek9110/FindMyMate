@@ -139,7 +139,7 @@ def create_profile(profile_data: ProfileCreate, db: Session = Depends(get_db)):
         "display_name": profile.display_name
     }
 
-@app.get("/profiles")
+@app.get("/profiles") #Zwraca listę profili
 def get_profiles(db: Session = Depends(get_db)):
     profiles = db.query(Profile).all()
 
@@ -155,7 +155,7 @@ def get_profiles(db: Session = Depends(get_db)):
         for profile in profiles
     ]
 
-@app.post("/interests")
+@app.post("/interests") #Tworzy zainteresowanie
 def create_interest(interest_data: InterestCreate, db: Session = Depends(get_db)):
     existing_interest = db.query(Interest).filter(Interest.name == interest_data.name).first()
 
@@ -174,7 +174,7 @@ def create_interest(interest_data: InterestCreate, db: Session = Depends(get_db)
         "name": interest.name
     }
 
-@app.get("/interests")
+@app.get("/interests") #Pobiera listę zainteresowań wraz z ich id
 def get_interests(db: Session = Depends(get_db)):
     interests = db.query(Interest).all()
 
@@ -186,7 +186,7 @@ def get_interests(db: Session = Depends(get_db)):
         for interest in interests
     ]
 
-@app.post("/profile-interests")
+@app.post("/profile-interests") #Przypisuje zainteresowanie do profilu
 def assign_interest_to_profile(data: ProfileInterestCreate, db: Session = Depends(get_db)):
     profile = db.query(Profile).filter(Profile.id == data.profile_id).first()
     if not profile:
@@ -224,7 +224,7 @@ def assign_interest_to_profile(data: ProfileInterestCreate, db: Session = Depend
         "interest_id": profile_interest.interest_id
     }
 
-@app.get("/profiles/{profile_id}/interests")
+@app.get("/profiles/{profile_id}/interests") #Pobiera zainteresowania profilu po id
 def get_profile_interests(profile_id: int, db: Session = Depends(get_db)):
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if not profile:
@@ -247,3 +247,42 @@ def get_profile_interests(profile_id: int, db: Session = Depends(get_db)):
             for _, interest in assignments
         ]
     }
+
+@app.get("/discover/{profile_id}") #Pobiera listę profili
+def discover_profiles(profile_id: int, db: Session = Depends(get_db)):
+    current_profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if not current_profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    profiles = db.query(Profile).filter(Profile.id != profile_id).all()
+
+    result = []
+
+    for profile in profiles:
+        assignments = (
+            db.query(ProfileInterest, Interest)
+            .join(Interest, ProfileInterest.interest_id == Interest.id)
+            .filter(ProfileInterest.profile_id == profile.id)
+            .all()
+        )
+
+        result.append(
+            {
+                "id": profile.id,
+                "user_id": profile.user_id,
+                "display_name": profile.display_name,
+                "age": profile.age,
+                "bio": profile.bio,
+                "city": profile.city,
+                "interests": [
+                    interest.name
+                    for _, interest in assignments
+                ]
+            }
+        )
+
+    return {
+        "current_profile_id": profile_id,
+        "candidates": result
+    }
+
