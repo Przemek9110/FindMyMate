@@ -288,3 +288,70 @@ def discover_profiles(profile_id: int, db: Session = Depends(get_db)):
         "candidates": result
     }
 
+@app.post("/reactions") #Zapisuje reakcje na profil
+def create_reaction(data: ReactionCreate, db: Session = Depends(get_db)):
+    if data.reaction_type not in ["like", "pass"]:
+        raise HTTPException(status_code=400, detail="reaction_type must be 'like' or 'pass'")
+
+    if data.from_profile_id == data.to_profile_id:
+        raise HTTPException(status_code=400, detail="Profile cannot react to itself")
+
+    from_profile = db.query(Profile).filter(Profile.id == data.from_profile_id).first()
+    if not from_profile:
+        raise HTTPException(status_code=404, detail="Source profile not found")
+
+    to_profile = db.query(Profile).filter(Profile.id == data.to_profile_id).first()
+    if not to_profile:
+        raise HTTPException(status_code=404, detail="Target profile not found")
+
+    existing_reaction = (
+        db.query(Reaction)
+        .filter(
+            Reaction.from_profile_id == data.from_profile_id,
+            Reaction.to_profile_id == data.to_profile_id
+        )
+        .first()
+    )
+
+    if existing_reaction:
+        raise HTTPException(status_code=400, detail="Reaction already exists for this pair")
+
+    reaction = Reaction(
+        from_profile_id=data.from_profile_id,
+        to_profile_id=data.to_profile_id,
+        reaction_type=data.reaction_type
+    )
+
+    db.add(reaction)
+    db.commit()
+    db.refresh(reaction)
+
+    return {
+        "message": "reaction created",
+        "id": reaction.id,
+        "from_profile_id": reaction.from_profile_id,
+        "to_profile_id": reaction.to_profile_id,
+        "reaction_type": reaction.reaction_type
+    }
+
+@app.get("/reactions/{profile_id}") #Podgląd reakcji
+def get_reactions(profile_id: int, db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    reactions = (
+        db.query(Reaction)
+        .filter(Reaction.from_profile_id == profile_id)
+        .all()
+    )
+
+    return [
+        {
+            "id": reaction.id,
+            "from_profile_id": reaction.from_profile_id,
+            "to_profile_id": reaction.to_profile_id,
+            "reaction_type": reaction.reaction_type
+        }
+        for reaction in reactions
+    ]
