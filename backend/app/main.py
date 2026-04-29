@@ -17,6 +17,7 @@ from app.models.profile_interest import ProfileInterest
 from app.schemas.interest import InterestCreate, ProfileInterestCreate
 from app.models.reaction import Reaction
 from app.schemas.reaction import ReactionCreate
+from app.models.match import Match
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -288,7 +289,7 @@ def discover_profiles(profile_id: int, db: Session = Depends(get_db)):
         "candidates": result
     }
 
-@app.post("/reactions") #Zapisuje reakcje na profil
+@app.post("/reactions")
 def create_reaction(data: ReactionCreate, db: Session = Depends(get_db)):
     if data.reaction_type not in ["like", "pass"]:
         raise HTTPException(status_code=400, detail="reaction_type must be 'like' or 'pass'")
@@ -326,12 +327,53 @@ def create_reaction(data: ReactionCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(reaction)
 
+    match_created = False
+    match_id = None
+
+    if data.reaction_type == "like":
+        reverse_like = (
+            db.query(Reaction)
+            .filter(
+                Reaction.from_profile_id == data.to_profile_id,
+                Reaction.to_profile_id == data.from_profile_id,
+                Reaction.reaction_type == "like"
+            )
+            .first()
+        )
+
+        if reverse_like:
+            smaller_id = min(data.from_profile_id, data.to_profile_id)
+            larger_id = max(data.from_profile_id, data.to_profile_id)
+
+            existing_match = (
+                db.query(Match)
+                .filter(
+                    Match.profile_1_id == smaller_id,
+                    Match.profile_2_id == larger_id
+                )
+                .first()
+            )
+
+            if not existing_match:
+                match = Match(
+                    profile_1_id=smaller_id,
+                    profile_2_id=larger_id
+                )
+                db.add(match)
+                db.commit()
+                db.refresh(match)
+
+                match_created = True
+                match_id = match.id
+
     return {
         "message": "reaction created",
         "id": reaction.id,
         "from_profile_id": reaction.from_profile_id,
         "to_profile_id": reaction.to_profile_id,
-        "reaction_type": reaction.reaction_type
+        "reaction_type": reaction.reaction_type,
+        "match_created": match_created,
+        "match_id": match_id
     }
 
 @app.get("/reactions/{profile_id}") #Podgląd reakcji
@@ -355,3 +397,43 @@ def get_reactions(profile_id: int, db: Session = Depends(get_db)):
         }
         for reaction in reactions
     ]
+
+@app.get("/matches/{profile_id}")
+def get_matches(profile_id: int, db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    matches = (
+        db.query(Match)
+        .filter(
+            (Match.profile_1_id == profile_id) |
+            (Match.profile_2_id == profile_id)
+        )
+        .all()
+    )
+
+    result = []
+
+    for match in matches:
+        other_profile_id = (
+            match.profile_2_id if match.profile_1_id == profile_id else match.profile_1_id
+        )
+
+        other_profile = db.query(Profile).filter(Profile.id == other_profile_id).first()
+
+        result.append(
+            {
+                "match_id": match.id,
+                "profile_id": other_profile.id,
+                "display_name": other_profile.display_name,
+                "age": other_profile.age,
+                "bio": other_profile.bio,
+                "city": other_profile.city
+            }
+        )
+
+    return {
+        "profile_id": profile_id,
+        "matches": result
+    }
