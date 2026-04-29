@@ -4,8 +4,8 @@ from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.db.base import Base
-from app.db.session import engine, SessionLocal
-from app.db.seed import seed_users
+from app.db.seed import seed_demo_data
+from app.db.session import SessionLocal, engine
 
 from app.models.user import User
 from app.models.profile import Profile
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
     db = SessionLocal()
     try:
-        seed_users(db)
+        seed_demo_data(db)
     finally:
         db.close()
 
