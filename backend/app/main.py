@@ -18,6 +18,8 @@ from app.schemas.interest import InterestCreate, ProfileInterestCreate
 from app.models.reaction import Reaction
 from app.schemas.reaction import ReactionCreate
 from app.models.match import Match
+from app.models.message import Message
+from app.schemas.message import MessageCreate
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -289,7 +291,7 @@ def discover_profiles(profile_id: int, db: Session = Depends(get_db)):
         "candidates": result
     }
 
-@app.post("/reactions")
+@app.post("/reactions") # przypisuje reakcje do profilu
 def create_reaction(data: ReactionCreate, db: Session = Depends(get_db)):
     if data.reaction_type not in ["like", "pass"]:
         raise HTTPException(status_code=400, detail="reaction_type must be 'like' or 'pass'")
@@ -398,7 +400,7 @@ def get_reactions(profile_id: int, db: Session = Depends(get_db)):
         for reaction in reactions
     ]
 
-@app.get("/matches/{profile_id}")
+@app.get("/matches/{profile_id}") #Zwraca liste matchy dla id
 def get_matches(profile_id: int, db: Session = Depends(get_db)):
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if not profile:
@@ -436,4 +438,56 @@ def get_matches(profile_id: int, db: Session = Depends(get_db)):
     return {
         "profile_id": profile_id,
         "matches": result
+    }
+
+@app.post("/messages") #Wysyłanie wiadomości
+def create_message(data: MessageCreate, db: Session = Depends(get_db)):
+    match = db.query(Match).filter(Match.id == data.match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    if data.sender_profile_id not in [match.profile_1_id, match.profile_2_id]:
+        raise HTTPException(status_code=400, detail="Sender does not belong to this match")
+
+    message = Message(
+        match_id=data.match_id,
+        sender_profile_id=data.sender_profile_id,
+        content=data.content
+    )
+
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+
+    return {
+        "message": "message sent",
+        "id": message.id,
+        "match_id": message.match_id,
+        "sender_profile_id": message.sender_profile_id,
+        "content": message.content
+    }
+
+@app.get("/messages/{match_id}") #Historia widomosci
+def get_messages(match_id: int, db: Session = Depends(get_db)):
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    messages = (
+        db.query(Message)
+        .filter(Message.match_id == match_id)
+        .order_by(Message.id.asc())
+        .all()
+    )
+
+    return {
+        "match_id": match_id,
+        "messages": [
+            {
+                "id": message.id,
+                "sender_profile_id": message.sender_profile_id,
+                "content": message.content
+            }
+            for message in messages
+        ]
     }
