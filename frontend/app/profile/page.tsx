@@ -1,133 +1,124 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileDetails } from "@/components/profile/profile-details";
 import { InterestTags } from "@/components/profile/interest-tags";
-import { ProfileForm } from "@/components/profile/profile-form";
-import { getProfile, updateProfile } from "@/lib/api/profile";
+import { getProfileByUserId, type Profile } from "@/lib/api/profile";
+import { useAuthStore } from "@/store/authStore";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/page-header";
+import { getProfilePhoto } from "@/lib/profile-photo";
 
-type Profile = {
-  username: string;
-  bio: string;
-  interests: string[];
-};
+const CURRENT_PROFILE_ID_KEY = "currentProfileId";
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const authUser = useAuthStore((state) => state.user);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const data = await getProfile();
-      setProfile(data);
+      if (!authUser?.id) {
+        setProfile(null);
+        setProfilePhoto(null);
+        return;
+      }
+
+      setProfilePhoto(getProfilePhoto(authUser.id));
+
+      const data = await getProfileByUserId(authUser.id);
+
+      if (data) {
+        localStorage.setItem(CURRENT_PROFILE_ID_KEY, String(data.id));
+        setProfile(data);
+        return;
+      }
+
+      localStorage.removeItem(CURRENT_PROFILE_ID_KEY);
+      setProfile(null);
     } catch {
-      setError("Nie udało się pobrać profilu.");
+      setError("Nie udalo sie pobrac profilu.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authUser?.id]);
 
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
 
-  const handleSave = async (updatedProfile: Profile) => {
-    try {
-      setIsSaving(true);
-      setError(null);
-
-      const data = await updateProfile(updatedProfile);
-      setProfile(data);
-      setIsEditing(false);
-      setError(null);
-      setSuccessMessage("Profil zapisany");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch {
-      setError("Nie udało się zapisać zmian.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (isSaving) return;
-    setIsEditing(false);
-  };
-
-  const handleEdit = () => {
-    if (isSaving) return;
-    setError(null);
-    setIsEditing(true);
-  };
-
-  const handleRetry = () => {
-    loadProfile();
-  };
-
   return (
     <ProtectedRoute>
-      <main className="min-h-screen bg-background px-4 py-8">
-        {isLoading ? (
-          <div className="mx-auto max-w-3xl rounded-2xl border bg-card p-6 shadow-sm">
-            <p className="text-sm text-muted-foreground">Ładowanie profilu...</p>
-          </div>
-        ) : error && !profile ? (
-          <div className="mx-auto flex max-w-3xl flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
-            <p className="text-sm text-red-500">{error}</p>
+      <main className="mx-auto min-h-screen max-w-3xl px-0 py-4 sm:py-8">
+        <div className="mb-6">
+          <PageHeader
+            eyebrow="Twoj profil"
+            title="Podglad profilu"
+            description="Edycje profilu znajdziesz teraz w ustawieniach."
+          />
+        </div>
 
-            <button
-              type="button"
-              onClick={handleRetry}
-              className="w-fit rounded-xl border px-4 py-2 text-sm hover:bg-muted"
-            >
-              Spróbuj ponownie
-            </button>
-          </div>
+        {isLoading ? (
+          <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
+            <CardContent className="space-y-4 p-6">
+              <div className="flex items-center gap-4">
+                <Skeleton className="size-20 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-full max-w-md" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : error ? (
+          <Card className="border-red-200 bg-red-50/80 text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+            <CardContent className="flex flex-col gap-4 p-6">
+              <p className="text-sm text-red-500">{error}</p>
+              <Button
+                type="button"
+                onClick={loadProfile}
+                variant="outline"
+                className="w-fit"
+              >
+                Sprobuj ponownie
+              </Button>
+            </CardContent>
+          </Card>
         ) : profile ? (
-          <div className="mx-auto flex max-w-3xl flex-col gap-6">
+          <div className="flex flex-col gap-6">
             <ProfileHeader
               username={profile.username}
               bio={profile.bio}
-              onEdit={handleEdit}
-              isEditing={isEditing}
+              photoUrl={profilePhoto}
+              onEdit={() => router.push("/settings")}
+              isEditing={false}
             />
-
-            {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {error}
-              </div>
-            )}
-
-            {successMessage && (
-              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                {successMessage}
-              </div>
-            )}
-
-            {isEditing ? (
-              <ProfileForm
-                profile={profile}
-                onSave={handleSave}
-                onCancel={handleCancel}
-                isSaving={isSaving}
-              />
-            ) : (
-              <>
-                <ProfileDetails bio={profile.bio} />
-                <InterestTags interests={profile.interests} />
-              </>
-            )}
+            <ProfileDetails bio={profile.bio} />
+            <InterestTags interests={profile.interests} />
           </div>
-        ) : null}
+        ) : (
+          <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
+            <CardContent className="flex flex-col gap-4 p-6">
+              <p className="text-sm text-muted-foreground">
+                Nie masz jeszcze profilu. Utworz go w ustawieniach.
+              </p>
+              <Button onClick={() => router.push("/settings")} className="w-fit">
+                Przejdz do ustawien
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </ProtectedRoute>
   );

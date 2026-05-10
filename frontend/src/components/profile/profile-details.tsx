@@ -1,14 +1,20 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 type ProfileDetailsProps = {
   bio: string;
 };
 
 export function ProfileDetails({ bio }: ProfileDetailsProps) {
   return (
-    <section className="rounded-2xl border bg-card p-6 shadow-sm">
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">O mnie</h2>
-        <p className="leading-7 text-muted-foreground">{bio}</p>
-      </div>
-    </section>
+    <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
+      <CardHeader>
+        <CardTitle>O mnie</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="leading-7 text-muted-foreground">
+          {bio || "Profil czeka na pierwszy opis."}
+        </p>
+      </CardContent>
+    </Card>
   );
 }

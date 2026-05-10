@@ -1,18 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, Heart, XCircle } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  CheckCircle2,
+  Handshake,
+  ThumbsDown,
+  ThumbsUp,
+  UsersRound,
+  XCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { getProfile, type Profile } from "@/lib/api/profile";
+import { getProfileByUserId, type Profile } from "@/lib/api/profile";
 import { useDiscoverStore } from "@/store/discoverStore";
 import { useMatchesStore } from "@/store/matchesStore";
+import { useAuthStore } from "@/store/authStore";
 import { UserCard } from "@/components/discover/user-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   getDiscoverUsers,
   sendReaction,
   type DiscoverUser,
+  type ReactionType,
 } from "@/lib/api/discover";
+
+const CURRENT_PROFILE_ID_KEY = "currentProfileId";
+const DUPLICATE_REACTION_MESSAGE = "Reaction already exists for this pair";
 
 type FeedbackModal =
   | {
@@ -31,7 +47,11 @@ export default function DiscoverPage() {
   const [isReacting, setIsReacting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedbackModal, setFeedbackModal] = useState<FeedbackModal | null>(null);
+  const [reactionAnimation, setReactionAnimation] =
+    useState<ReactionType | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [currentProfileId, setCurrentProfileId] = useState<number | null>(null);
+  const authUser = useAuthStore((state) => state.user);
   const { reactedUserIds, addReaction } = useDiscoverStore();
   const { addMatch, isMatched } = useMatchesStore();
 
@@ -46,29 +66,49 @@ export default function DiscoverPage() {
     }, 1600);
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const [usersData, profileData] = await Promise.all([
-        getDiscoverUsers(),
-        getProfile(),
-      ]);
+      let storedProfileId = localStorage.getItem(CURRENT_PROFILE_ID_KEY);
+      let profileData: Profile | null = null;
+
+      if (!storedProfileId && authUser?.id) {
+        profileData = await getProfileByUserId(authUser.id);
+
+        if (profileData) {
+          storedProfileId = String(profileData.id);
+          localStorage.setItem(CURRENT_PROFILE_ID_KEY, storedProfileId);
+        }
+      } else if (authUser?.id) {
+        profileData = await getProfileByUserId(authUser.id);
+      }
+
+      if (!storedProfileId) {
+        setUsers([]);
+        setProfile(null);
+        setCurrentProfileId(null);
+        setError("Najpierw utworz profil, zeby korzystac z Discover.");
+        return;
+      }
+
+      const usersData = await getDiscoverUsers(storedProfileId);
 
       setUsers(usersData);
       setProfile(profileData);
+      setCurrentProfileId(Number(storedProfileId));
     } catch (error) {
-      console.error("Błąd podczas pobierania danych Discover:", error);
-      setError("Nie udało się pobrać użytkowników");
+      console.error("Blad podczas pobierania danych Discover:", error);
+      setError("Nie udalo sie pobrac uzytkownikow");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [authUser?.id]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const availableUsers = users.filter((user) => !reactedUserIds.includes(user.id));
   const currentUser = availableUsers[0];
@@ -80,83 +120,120 @@ export default function DiscoverPage() {
         )
       : [];
 
-  const handleLike = async (user: DiscoverUser) => {
-    if (isReacting) return;
+  const removeCandidate = (userId: string) => {
+    addReaction(userId);
+    setUsers((currentUsers) =>
+      currentUsers.filter((candidate) => candidate.id !== userId)
+    );
+  };
+
+  const isDuplicateReactionError = (error: unknown) => {
+    return (
+      error instanceof Error &&
+      error.message.includes(DUPLICATE_REACTION_MESSAGE)
+    );
+  };
+
+  const handleReaction = async (
+    user: DiscoverUser,
+    reactionType: ReactionType
+  ) => {
+    if (isReacting || !currentProfileId) return;
 
     try {
       setIsReacting(true);
+      setReactionAnimation(reactionType);
+      window.setTimeout(() => setReactionAnimation(null), 850);
 
-      await sendReaction(user.id, "like");
+      const reaction = await sendReaction(
+        currentProfileId,
+        user.profileId,
+        reactionType
+      );
 
-      if (user.incomingReaction === "like" && !isMatched(user.id)) {
-        addMatch(user);
+      if (reactionType === "like" && reaction.match_created && !isMatched(user.id)) {
+        addMatch({ ...user, matchId: reaction.match_id ?? undefined });
         setFeedbackModal({ type: "match", username: user.username });
       } else {
         showTemporaryModal({
-          type: "like",
-          message: `Polubiono profil ${user.username}.`,
+          type: reactionType,
+          message:
+            reactionType === "like"
+              ? `Polubiono profil ${user.username}.`
+              : `Pominieto profil ${user.username}.`,
         });
       }
 
-      addReaction(user.id);
+      removeCandidate(user.id);
     } catch (error) {
-      console.error("Błąd podczas wysyłania reakcji:", error);
+      if (isDuplicateReactionError(error)) {
+        removeCandidate(user.id);
+        showTemporaryModal({
+          type: reactionType,
+          message: "Ten profil zostal juz oceniony.",
+        });
+        return;
+      }
+
+      console.error("Blad podczas wysylania reakcji:", error);
       showTemporaryModal({
-        type: "like",
-        message: "Nie udało się zapisać polubienia. Spróbuj ponownie.",
+        type: reactionType,
+        message:
+          reactionType === "like"
+            ? "Nie udalo sie zapisac polubienia. Sprobuj ponownie."
+            : "Nie udalo sie zapisac pominiecia. Sprobuj ponownie.",
       });
     } finally {
       setIsReacting(false);
     }
   };
 
+  const handleLike = async (user: DiscoverUser) => {
+    await handleReaction(user, "like");
+  };
+
   const handlePass = async (user: DiscoverUser) => {
-    if (isReacting) return;
-
-    try {
-      setIsReacting(true);
-
-      await sendReaction(user.id, "pass");
-      addReaction(user.id);
-
-      showTemporaryModal({
-        type: "pass",
-        message: `Pominięto profil ${user.username}.`,
-      });
-    } catch (error) {
-      console.error("Błąd podczas wysyłania reakcji:", error);
-      showTemporaryModal({
-        type: "pass",
-        message: "Nie udało się zapisać pominięcia. Spróbuj ponownie.",
-      });
-    } finally {
-      setIsReacting(false);
-    }
+    await handleReaction(user, "pass");
   };
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen bg-background px-4 py-8">
-        <div className="mx-auto flex max-w-md flex-col gap-6">
-          <h1 className="text-2xl font-bold">Discover</h1>
+      <main className="mx-auto min-h-screen max-w-md px-0 py-4 sm:py-8">
+        <div className="flex flex-col gap-6">
+          <PageHeader
+            eyebrow="Odkrywaj"
+            title="Poznaj kogos nowego"
+            description="Podejmuj decyzje przyciskami Poznajmy się i Pomiń. Reszte ogarnia flow."
+          />
 
           {isLoading ? (
-            <div className="rounded-2xl border bg-card p-6 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Ładowanie użytkowników...
-              </p>
-            </div>
+            <Card className="border-0 bg-card/95 shadow-xl ring-1 ring-border/70">
+              <CardContent className="space-y-5 p-5">
+                <Skeleton className="h-52 rounded-2xl" />
+                <div className="flex items-center gap-4">
+                  <Skeleton className="size-16 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                </div>
+                <Skeleton className="h-16 rounded-xl" />
+              </CardContent>
+            </Card>
           ) : error ? (
-            <div className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
-              <p className="text-sm text-red-500">{error}</p>
-              <button
+            <Card className="border-red-200 bg-red-50/80 text-red-700 shadow-sm dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+              <CardContent className="flex flex-col gap-4 p-6">
+                <p className="text-sm">{error}</p>
+              <Button
                 type="button"
                 onClick={loadData}
-                className="w-fit rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                variant="outline"
+                className="w-fit"
               >
-                Spróbuj ponownie
-              </button>
-            </div>
+                Sprobuj ponownie
+              </Button>
+              </CardContent>
+            </Card>
           ) : currentUser ? (
             <UserCard
               user={currentUser}
@@ -166,43 +243,50 @@ export default function DiscoverPage() {
               disabled={isReacting}
             />
           ) : (
-            <div className="rounded-2xl border bg-card p-6 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Spróbuj później ponownie albo poszerz swoje zainteresowania, aby
-                zobaczyć więcej dopasowań.
+            <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
+              <CardContent className="p-8 text-center">
+                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <UsersRound className="size-6" />
+                </div>
+                <h2 className="font-semibold">To juz wszystkie profile</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Sprobuj pozniej ponownie albo poszerz swoje zainteresowania, aby
+                zobaczyc wiecej dopasowan.
               </p>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </main>
 
       {feedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-sm rounded-2xl border bg-background p-6 text-center shadow-xl">
+          <div className="w-full max-w-sm rounded-3xl border bg-background p-6 text-center shadow-2xl">
             {feedbackModal.type === "match" ? (
               <>
                 <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Heart className="h-7 w-7" />
+                  <Handshake className="h-7 w-7" />
                 </div>
                 <h2 className="text-2xl font-bold">To match!</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Ty i {feedbackModal.username} polubiliście się wzajemnie.
+                  Ty i {feedbackModal.username} polubiliscie sie wzajemnie.
                 </p>
                 <div className="mt-6 flex gap-3">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => router.push("/matches")}
-                    className="flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                    className="flex-1"
                   >
                     Zobacz matche
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={closeFeedbackModal}
-                    className="flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                    variant="outline"
+                    className="flex-1"
                   >
                     Kontynuuj
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
@@ -216,6 +300,24 @@ export default function DiscoverPage() {
                 </div>
                 <p className="text-sm font-medium">{feedbackModal.message}</p>
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {reactionAnimation && (
+        <div className="pointer-events-none fixed inset-0 z-60 flex items-center justify-center px-4">
+          <div
+            className={`animate-[reaction-pop_900ms_cubic-bezier(0.16,1,0.3,1)_forwards] rounded-3xl border bg-background/95 p-8 shadow-2xl ${
+              reactionAnimation === "like"
+                ? "border-emerald-300 text-emerald-600 dark:border-emerald-800 dark:text-emerald-300"
+                : "border-red-300 text-red-600 dark:border-red-900 dark:text-red-300"
+            }`}
+          >
+            {reactionAnimation === "like" ? (
+              <ThumbsUp className="size-20" />
+            ) : (
+              <ThumbsDown className="size-20" />
             )}
           </div>
         </div>

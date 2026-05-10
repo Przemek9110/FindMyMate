@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MessageCircle, Send, X } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useMatchesStore } from "@/store/matchesStore";
 import { useChatUiStore } from "@/store/chatUiStore";
@@ -11,9 +14,13 @@ import {
   type Message,
 } from "@/lib/api/chat";
 import { useAuthStore } from "@/store/authStore";
+import { getProfileByUserId } from "@/lib/api/profile";
+
+const CURRENT_PROFILE_ID_KEY = "currentProfileId";
 
 export function ChatDock() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authUser = useAuthStore((s) => s.user);
   const { matches } = useMatchesStore();
 
   const {
@@ -30,6 +37,37 @@ export function ChatDock() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [currentProfileId, setCurrentProfileId] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function loadCurrentProfile() {
+      const storedProfileId = localStorage.getItem(CURRENT_PROFILE_ID_KEY);
+
+      if (storedProfileId) {
+        setCurrentProfileId(Number(storedProfileId));
+        return;
+      }
+
+      if (!authUser?.id) {
+        setCurrentProfileId(null);
+        return;
+      }
+
+      const profile = await getProfileByUserId(authUser.id);
+
+      if (profile) {
+        localStorage.setItem(CURRENT_PROFILE_ID_KEY, String(profile.id));
+        setCurrentProfileId(profile.id);
+        return;
+      }
+
+      setCurrentProfileId(null);
+    }
+
+    if (isAuthenticated) {
+      loadCurrentProfile();
+    }
+  }, [authUser?.id, isAuthenticated]);
 
   useEffect(() => {
     async function loadMessages() {
@@ -40,10 +78,10 @@ export function ChatDock() {
 
       try {
         setIsLoading(true);
-        const data = await getChatMessages(selectedUserId);
+        const data = await getChatMessages(selectedMatch.matchId ?? selectedMatch.id);
         setMessages(data);
       } catch (error) {
-        console.error("Błąd podczas pobierania wiadomości:", error);
+        console.error("Blad podczas pobierania wiadomosci:", error);
         setMessages([]);
       } finally {
         setIsLoading(false);
@@ -58,17 +96,21 @@ export function ChatDock() {
   const handleSend = async () => {
     const trimmedMessage = input.trim();
 
-    if (!trimmedMessage || !selectedUserId) {
+    if (!trimmedMessage || !selectedUserId || !selectedMatch || !currentProfileId) {
       return;
     }
 
     try {
       setIsSending(true);
-      const newMessage = await sendChatMessage(selectedUserId, trimmedMessage);
+      const newMessage = await sendChatMessage(
+        selectedMatch.matchId ?? selectedMatch.id,
+        currentProfileId,
+        trimmedMessage
+      );
       setMessages((prev) => [...prev, newMessage]);
       setInput("");
     } catch (error) {
-      console.error("Błąd podczas wysyłania wiadomości:", error);
+      console.error("Blad podczas wysylania wiadomosci:", error);
     } finally {
       setIsSending(false);
     }
@@ -81,78 +123,96 @@ export function ChatDock() {
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {!isOpen ? (
-        <Button onClick={toggleChat} className="rounded-full px-5 shadow-lg">
+        <Button onClick={toggleChat} className="h-12 rounded-full px-5 shadow-xl">
+          <MessageCircle className="size-4" />
           Chat
         </Button>
       ) : (
-        <div className="w-[340px] rounded-2xl border bg-background shadow-2xl">
-          <div className="flex items-center justify-between border-b px-4 py-3">
+        <Card className="w-[min(360px,calc(100vw-2rem))] overflow-hidden border-0 bg-card/98 shadow-2xl ring-1 ring-border/70">
+          <CardHeader className="relative border-b bg-background/70 p-4 pr-14">
             <div>
               <p className="font-semibold">Chat</p>
               <p className="text-xs text-muted-foreground">
                 {selectedMatch
                   ? `Rozmowa z ${selectedMatch.username}`
-                  : "Wybierz rozmowę"}
+                : "Wybierz rozmowe"}
               </p>
             </div>
 
-            <Button variant="ghost" size="sm" onClick={closeChat}>
-              Zamknij
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={closeChat}
+              className="absolute right-3 top-3"
+              aria-label="Zamknij okno chatu"
+            >
+              <X className="size-4" />
             </Button>
-          </div>
+          </CardHeader>
 
           {!selectedUserId ? (
-            <div className="max-h-[420px] space-y-2 overflow-y-auto p-3">
+            <CardContent className="max-h-[420px] space-y-2 overflow-y-auto p-3">
               {matches.length === 0 ? (
-                <div className="rounded-xl border p-4 text-sm text-muted-foreground">
-                  Nie masz jeszcze żadnych rozmów.
+                <div className="rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+                  Nie masz jeszcze zadnych rozmow.
                 </div>
               ) : (
                 matches.map((match) => (
                   <button
                     key={match.id}
                     onClick={() => selectConversation(match.id)}
-                    className="w-full rounded-xl border p-3 text-left transition hover:bg-muted/40"
+                    className="flex w-full items-center gap-3 rounded-2xl border bg-background/60 p-3 text-left transition hover:bg-muted/50"
                   >
-                    <p className="font-medium">{match.username}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {match.interests.join(", ")}
-                    </p>
+                    <Avatar className="size-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {match.username.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{match.username}</p>
+                      <p className="truncate text-sm text-muted-foreground">
+                        {match.interests.join(", ") || "Rozpocznij rozmowe"}
+                      </p>
+                    </div>
                   </button>
                 ))
               )}
-            </div>
+            </CardContent>
           ) : (
             <div className="flex h-[460px] flex-col">
               <div className="border-b px-4 py-3">
                 <button
                   onClick={() => selectConversation(null)}
-                  className="text-sm text-muted-foreground hover:underline"
+                  className="text-sm text-muted-foreground hover:text-foreground"
                 >
-                  ← Wróć do listy rozmów
+                  Wroc do listy rozmow
                 </button>
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
                 {isLoading ? (
                   <p className="text-sm text-muted-foreground">
-                    Ładowanie wiadomości...
+                    Ladowanie wiadomosci...
+                  </p>
+                ) : !currentProfileId ? (
+                  <p className="text-sm text-red-500">
+                    Najpierw utworz profil, zeby wysylac wiadomosci.
                   </p>
                 ) : messages.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Brak wiadomości. Rozpocznij rozmowę.
+                    Brak wiadomosci. Rozpocznij rozmowe.
                   </p>
                 ) : (
                   messages.map((message) => {
-                    const isMine = message.senderId === "me";
+                    const isMine = message.senderId === String(currentProfileId);
 
                     return (
                       <div
                         key={message.id}
-                        className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${
+                        className={`max-w-[85%] rounded-3xl px-4 py-2 text-sm shadow-sm ${
                           isMine
-                            ? "ml-auto bg-primary text-primary-foreground"
-                            : "bg-muted text-foreground"
+                            ? "ml-auto rounded-br-md bg-primary text-primary-foreground"
+                            : "rounded-bl-md bg-muted text-foreground"
                         }`}
                       >
                         {message.text}
@@ -162,11 +222,11 @@ export function ChatDock() {
                 )}
               </div>
 
-              <div className="flex gap-2 border-t p-3">
+              <div className="flex gap-2 border-t bg-background/80 p-3">
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Napisz wiadomość..."
+                  placeholder="Napisz wiadomosc..."
                   disabled={isSending}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -174,13 +234,17 @@ export function ChatDock() {
                     }
                   }}
                 />
-                <Button onClick={handleSend} disabled={isSending}>
-                  {isSending ? "..." : "Wyślij"}
+                <Button
+                  onClick={handleSend}
+                  disabled={isSending || !currentProfileId}
+                  size="icon"
+                >
+                  <Send className="size-4" />
                 </Button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );

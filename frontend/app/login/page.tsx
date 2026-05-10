@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function LoginPage() {
     setError("");
 
     if (!formData.email.trim() || !formData.password.trim()) {
-      setError("Uzupełnij email i hasło.");
+      setError("Uzupelnij email i haslo.");
       return;
     }
 
@@ -59,8 +60,8 @@ export default function LoginPage() {
 
       router.push("/discover");
     } catch (err) {
-      console.error("Błąd logowania:", err);
-      setError("Nie udało się zalogować. Sprawdź dane i spróbuj ponownie.");
+      console.error("Blad logowania:", err);
+      setError("Nie udalo sie zalogowac. Sprawdz dane i sprobuj ponownie.");
     } finally {
       setIsLoading(false);
     }
@@ -68,13 +69,17 @@ export default function LoginPage() {
 
   return (
     <GuestRoute>
-      <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-10">
-        <Card className="w-full max-w-md">
+      <div className="mx-auto flex min-h-[calc(100vh-140px)] max-w-md flex-col justify-center gap-6 px-4 py-10">
+        <PageHeader
+          eyebrow="Logowanie"
+          title="Wroc do FindMyMate"
+          description="Zaloguj sie, aby przejsc do aplikacji."
+        />
+
+        <Card className="w-full border-0 bg-card/95 shadow-xl ring-1 ring-border/70">
           <CardHeader className="space-y-2">
-            <CardTitle className="text-2xl">Logowanie</CardTitle>
-            <CardDescription>
-              Zaloguj się, aby przejść do aplikacji FindMyMate.
-            </CardDescription>
+            <CardTitle>Dane logowania</CardTitle>
+            <CardDescription>Wpisz email i haslo.</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -95,7 +100,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Hasło</Label>
+                <Label htmlFor="password">Haslo</Label>
                 <Input
                   id="password"
                   type="password"
@@ -116,7 +121,7 @@ export default function LoginPage() {
               )}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logowanie..." : "Zaloguj się"}
+                {isLoading ? "Logowanie..." : "Zaloguj sie"}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">
@@ -125,7 +130,7 @@ export default function LoginPage() {
                   href="/register"
                   className="font-medium text-primary hover:underline"
                 >
-                  Zarejestruj się
+                  Zarejestruj sie
                 </Link>
               </p>
             </form>

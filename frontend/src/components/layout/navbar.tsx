@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  LogOut,
+  MessageCircle,
+  Search,
+  Settings,
+  Sparkles,
+  User,
+  UsersRound,
+} from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { Button } from "@/components/ui/button";
 
 export function Navbar() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -15,64 +25,81 @@ export function Navbar() {
   };
 
   return (
-    <header className="border-b bg-background">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-semibold">
-          FindMyMate
+    <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
+          <span className="flex size-9 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+            <UsersRound className="size-4" />
+          </span>
+          <span>FindMyMate</span>
         </Link>
 
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex flex-wrap items-center gap-2 text-sm">
           <Link
             href="/"
-            className="text-muted-foreground transition-colors hover:text-foreground"
+            className="rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            Home
+            Start
           </Link>
 
           {isAuthenticated ? (
             <>
               <Link
                 href="/discover"
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                Discover
+                <Search className="size-3.5" />
+                Odkrywaj
               </Link>
 
               <Link
                 href="/matches"
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                Matches
+                <Sparkles className="size-3.5" />
+                Dopasowania
               </Link>
 
               <Link
                 href="/chat"
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                Chat
+                <MessageCircle className="size-3.5" />
+                Rozmowy
               </Link>
 
               <Link
                 href="/profile"
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                Profile
+                <User className="size-3.5" />
+                Profil
               </Link>
 
-              <button
+              <Link
+                href="/settings"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Settings className="size-3.5" />
+                Ustawienia
+              </Link>
+
+              <Button
                 type="button"
                 onClick={handleLogout}
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                variant="ghost"
+                size="sm"
               >
+                <LogOut className="size-3.5" />
                 Wyloguj
-              </button>
+              </Button>
             </>
           ) : (
             <Link
               href="/login"
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full bg-primary px-4 py-2 text-primary-foreground shadow-sm transition hover:bg-primary/90"
             >
-              Login
+              Logowanie
             </Link>
           )}
         </nav>

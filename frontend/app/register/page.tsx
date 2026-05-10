@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Mail, UserPlus } from "lucide-react";
 import { register } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
 import { GuestRoute } from "@/components/auth/GuestRoute";
@@ -17,6 +18,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -51,7 +54,7 @@ export default function RegisterPage() {
       !formData.email.trim() ||
       !formData.password.trim()
     ) {
-      setError("Uzupełnij nazwę użytkownika, email i hasło.");
+      setError("Uzupelnij nazwe uzytkownika, email i haslo.");
       return;
     }
 
@@ -65,10 +68,10 @@ export default function RegisterPage() {
         token: response.token,
       });
 
-      router.push("/discover");
+      router.push("/profile");
     } catch (err) {
-      console.error("Błąd rejestracji:", err);
-      setError("Nie udało się utworzyć konta. Spróbuj ponownie.");
+      console.error("Blad rejestracji:", err);
+      setError("Nie udalo sie utworzyc konta. Sprobuj ponownie.");
     } finally {
       setIsLoading(false);
     }
@@ -76,19 +79,25 @@ export default function RegisterPage() {
 
   return (
     <GuestRoute>
-      <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-10">
-        <Card className="w-full max-w-md">
+      <div className="mx-auto grid min-h-[calc(100vh-160px)] max-w-md content-center gap-6 px-4 py-8">
+        <PageHeader
+          eyebrow="Rejestracja"
+          title="Dolacz do FindMyMate"
+          description="Stworz konto, uzupelnij profil i poznawaj osoby z podobnymi zainteresowaniami."
+        />
+
+        <Card className="w-full border-0 bg-card/95 shadow-xl ring-1 ring-border/70">
           <CardHeader className="space-y-2">
-            <CardTitle className="text-2xl">Rejestracja</CardTitle>
+            <CardTitle>Dane konta</CardTitle>
             <CardDescription>
-              Utwórz konto, aby rozpocząć korzystanie z FindMyMate.
+              Te dane posluza do utworzenia konta w aplikacji.
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="username">Nazwa użytkownika</Label>
+                <Label htmlFor="username">Nazwa uzytkownika</Label>
                 <Input
                   id="username"
                   type="text"
@@ -118,7 +127,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Hasło</Label>
+                <Label htmlFor="password">Haslo</Label>
                 <Input
                   id="password"
                   type="password"
@@ -133,25 +142,38 @@ export default function RegisterPage() {
               </div>
 
               {error && (
-                <p id="register-error" className="text-sm text-red-500">
+                <div
+                  id="register-error"
+                  className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
+                >
                   {error}
-                </p>
+                </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Tworzenie konta..." : "Załóż konto"}
+              <Button type="submit" className="h-11 w-full" disabled={isLoading}>
+                {isLoading ? (
+                  "Tworzenie konta..."
+                ) : (
+                  <>
+                    <UserPlus className="size-4" />
+                    Zaloz konto
+                  </>
+                )}
               </Button>
-
-              <p className="text-center text-sm text-muted-foreground">
-                Masz już konto?{" "}
-                <Link
-                  href="/login"
-                  className="font-medium text-primary hover:underline"
-                >
-                  Zaloguj się
-                </Link>
-              </p>
             </form>
+
+            <Separator className="my-5" />
+
+            <p className="text-center text-sm text-muted-foreground">
+              Masz juz konto?{" "}
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+              >
+                <Mail className="size-3.5" />
+                Zaloguj sie
+              </Link>
+            </p>
           </CardContent>
         </Card>
       </div>
