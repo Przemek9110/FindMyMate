@@ -1,10 +1,48 @@
 import { useAuthStore } from "@/store/authStore";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
 
 type ApiRequestOptions = RequestInit & {
   auth?: boolean;
 };
+
+type ApiErrorResponse = {
+  detail?: string | { msg?: string }[];
+  message?: string;
+};
+
+function getErrorMessage(data: unknown, fallback: string) {
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
+
+  if (typeof data === "object" && data !== null) {
+    const errorData = data as ApiErrorResponse;
+
+    if (typeof errorData.detail === "string") {
+      return errorData.detail;
+    }
+
+    if (Array.isArray(errorData.detail)) {
+      const message = errorData.detail
+        .map((item) => item.msg)
+        .filter(Boolean)
+        .join(", ");
+
+      if (message) {
+        return message;
+      }
+    }
+
+    if (typeof errorData.message === "string") {
+      return errorData.message;
+    }
+  }
+
+  return fallback;
+}
 
 export async function apiFetch<T>(
   endpoint: string,
@@ -12,11 +50,9 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { auth = false, headers, ...restOptions } = options;
   const token = useAuthStore.getState().token;
+  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
 
-  console.log("API_URL:", API_URL);
-  console.log("ENDPOINT:", endpoint);
-
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${API_URL}${path}`, {
     ...restOptions,
     headers: {
       "Content-Type": "application/json",
@@ -26,20 +62,12 @@ export async function apiFetch<T>(
   });
 
   const contentType = response.headers.get("content-type");
-  let data: unknown = null;
-
-  if (contentType?.includes("application/json")) {
-    data = await response.json();
-  } else {
-    data = await response.text();
-  }
+  const data: unknown = contentType?.includes("application/json")
+    ? await response.json()
+    : await response.text();
 
   if (!response.ok) {
-    throw new Error(
-      typeof data === "object" && data !== null && "detail" in data
-        ? String((data as { detail?: string }).detail)
-        : "Wystąpił błąd API"
-    );
+    throw new Error(getErrorMessage(data, `API error ${response.status}`));
   }
 
   return data as T;

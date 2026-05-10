@@ -1,60 +1,79 @@
-type DiscoverUser = {
-  id: string;
-  username: string;
-  bio: string;
+import { apiFetch } from "./api";
+
+type BackendDiscoverCandidate = {
+  id: number;
+  user_id: number;
+  display_name: string;
+  age: number;
+  bio: string | null;
+  city: string | null;
   interests: string[];
-  incomingReaction: "like" | "pass" | "none";
 };
 
-type ReactionType = "like" | "pass";
+type DiscoverResponse = {
+  current_profile_id: number;
+  candidates: BackendDiscoverCandidate[];
+};
 
-const mockUsers: DiscoverUser[] = [
-  {
-    id: "1",
-    username: "AniaTravel",
-    bio: "Uwielbiam podróże i fotografię. Szukam osób do wspólnych wypadów.",
-    interests: ["Podróże", "Fotografia", "Kultura"],
-    incomingReaction: "like",
-  },
-  {
-    id: "2",
-    username: "CodeNina",
-    bio: "Frontend dev, UI/UX lover. Minimalizm i dobre projekty to moje życie.",
-    interests: ["React", "Design", "Figma"],
+export type DiscoverUser = {
+  id: string;
+  profileId: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  age: number;
+  bio: string;
+  city: string;
+  interests: string[];
+  incomingReaction: "like" | "pass" | "none";
+  matchId?: number;
+};
+
+export type ReactionType = "like" | "pass";
+
+export type ReactionResponse = {
+  message: string;
+  id: number;
+  from_profile_id: number;
+  to_profile_id: number;
+  reaction_type: ReactionType;
+  match_created: boolean;
+  match_id: number | null;
+};
+
+function mapDiscoverUser(candidate: BackendDiscoverCandidate): DiscoverUser {
+  return {
+    id: String(candidate.id),
+    profileId: candidate.id,
+    userId: candidate.user_id,
+    username: candidate.display_name,
+    displayName: candidate.display_name,
+    age: candidate.age,
+    bio: candidate.bio ?? "",
+    city: candidate.city ?? "",
+    interests: candidate.interests,
     incomingReaction: "none",
-  },
-  {
-    id: "3",
-    username: "MarekFit",
-    bio: "Lubię aktywny tryb życia, siłownię i dobre jedzenie.",
-    interests: ["Siłownia", "Dietetyka", "Podróże"],
-    incomingReaction: "like",
-  },
-  {
-    id: "4",
-    username: "Towarek",
-    bio: "Lubię aktywny tryb życia, siłownię i dobre jedzenie.",
-    interests: ["Siłownia", "Dietetyka", "Podróże"],
-    incomingReaction: "pass",
-  },
-];
+  };
+}
 
-export async function getDiscoverUsers(): Promise<DiscoverUser[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(mockUsers), 400);
-  });
+export async function getDiscoverUsers(
+  currentProfileId: number | string = 1
+): Promise<DiscoverUser[]> {
+  const data = await apiFetch<DiscoverResponse>(`/discover/${currentProfileId}`);
+  return data.candidates.map(mapDiscoverUser);
 }
 
 export async function sendReaction(
-  userId: string,
+  currentProfileId: number | string,
+  targetProfileId: number | string,
   reaction: ReactionType
-): Promise<{ success: boolean }> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log("Mock reaction saved:", { userId, reaction });
-      resolve({ success: true });
-    }, 300);
+): Promise<ReactionResponse> {
+  return apiFetch<ReactionResponse>("/reactions", {
+    method: "POST",
+    body: JSON.stringify({
+      from_profile_id: Number(currentProfileId),
+      to_profile_id: Number(targetProfileId),
+      reaction_type: reaction,
+    }),
   });
 }
-
-export type { DiscoverUser, ReactionType };

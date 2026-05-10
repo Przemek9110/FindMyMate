@@ -1,3 +1,5 @@
+import { apiFetch } from "./api";
+
 export type Message = {
   id: string;
   senderId: string;
@@ -5,54 +7,51 @@ export type Message = {
   createdAt: string;
 };
 
-const mockMessages: Record<string, Message[]> = {
-  "1": [
-    {
-      id: crypto.randomUUID(),
-      senderId: "1",
-      text: "Hej! Miło Cię poznać 😊",
-      createdAt: "2026-04-22T10:00:00Z",
-    },
-    {
-      id: crypto.randomUUID(),
-      senderId: "me",
-      text: "Cześć! Również mi miło.",
-      createdAt: "2026-04-22T10:01:00Z",
-    },
-  ],
-  "2": [
-    {
-      id: crypto.randomUUID(),
-      senderId: "3",
-      text: "Hej, widzę że też lubisz siłownię.",
-      createdAt: "2026-04-22T11:00:00Z",
-    },
-  ],
+type BackendMessage = {
+  id: number;
+  sender_profile_id: number;
+  content: string;
 };
 
-export async function getChatMessages(userId: string): Promise<Message[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return [...(mockMessages[userId] ?? [])];
+type MessagesResponse = {
+  match_id: number;
+  messages: BackendMessage[];
+};
+
+type SendMessageResponse = BackendMessage & {
+  message: string;
+  match_id: number;
+};
+
+function mapMessage(message: BackendMessage): Message {
+  return {
+    id: String(message.id),
+    senderId: String(message.sender_profile_id),
+    text: message.content,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export async function getChatMessages(
+  matchId: number | string
+): Promise<Message[]> {
+  const data = await apiFetch<MessagesResponse>(`/messages/${matchId}`);
+  return data.messages.map(mapMessage);
 }
 
 export async function sendChatMessage(
-  userId: string,
+  matchId: number | string,
+  senderProfileId: number | string,
   text: string
 ): Promise<Message> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  const data = await apiFetch<SendMessageResponse>("/messages", {
+    method: "POST",
+    body: JSON.stringify({
+      match_id: Number(matchId),
+      sender_profile_id: Number(senderProfileId),
+      content: text,
+    }),
+  });
 
-  const newMessage: Message = {
-    id: crypto.randomUUID(),
-    senderId: "me",
-    text,
-    createdAt: new Date().toISOString(),
-  };
-
-  if (!mockMessages[userId]) {
-    mockMessages[userId] = [];
-  }
-
-  mockMessages[userId] = [...mockMessages[userId], newMessage];
-
-  return newMessage;
+  return mapMessage(data);
 }
