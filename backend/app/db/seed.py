@@ -1,3 +1,5 @@
+import random
+
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -11,11 +13,32 @@ from app.models.user import User
 
 
 def seed_demo_data(db: Session):
-    existing_demo_user = db.query(User).filter(User.email == "demo1@example.com").first()
-    if existing_demo_user:
-        return
+    rng = random.Random(42)
 
-    users_data = [
+    interest_names = [
+        "muzyka",
+        "gry",
+        "podróże",
+        "filmy",
+        "sport",
+        "technologia",
+        "książki",
+        "fotografia",
+        "spacery",
+        "gotowanie",
+        "taniec",
+        "siłownia",
+        "rower",
+        "nauka języków",
+        "programowanie",
+        "sztuka",
+        "seriale",
+        "planszówki",
+        "psy",
+        "koty",
+    ]
+
+    demo_users_data = [
         {
             "email": "demo1@example.com",
             "password": "test123456",
@@ -58,60 +81,7 @@ def seed_demo_data(db: Session):
         },
     ]
 
-    created_users = []
-    for item in users_data:
-        user = User(
-            email=item["email"],
-            password_hash=hash_password(item["password"])
-        )
-        db.add(user)
-        created_users.append(user)
-
-    db.commit()
-
-    for user in created_users:
-        db.refresh(user)
-
-    created_profiles = []
-    for user, item in zip(created_users, users_data):
-        profile = Profile(
-            user_id=user.id,
-            display_name=item["display_name"],
-            age=item["age"],
-            bio=item["bio"],
-            city=item["city"]
-        )
-        db.add(profile)
-        created_profiles.append(profile)
-
-    db.commit()
-
-    for profile in created_profiles:
-        db.refresh(profile)
-
-    interest_names = [
-        "muzyka",
-        "gry",
-        "podróże",
-        "filmy",
-        "sport",
-        "technologia",
-        "książki",
-        "fotografia",
-        "spacery"
-    ]
-
-    for name in interest_names:
-        interest = Interest(name=name)
-        db.add(interest)
-
-    db.commit()
-
-    interests = db.query(Interest).filter(Interest.name.in_(interest_names)).all()
-    interest_by_name = {interest.name: interest for interest in interests}
-    profile_by_name = {profile.display_name: profile for profile in created_profiles}
-
-    profile_interest_map = {
+    demo_profile_interest_map = {
         "Adam": ["muzyka", "gry", "podróże"],
         "Ola": ["muzyka", "filmy", "spacery"],
         "Kasia": ["sport", "podróże"],
@@ -119,19 +89,7 @@ def seed_demo_data(db: Session):
         "Julia": ["muzyka", "podróże", "fotografia"],
     }
 
-    for profile_name, interest_list in profile_interest_map.items():
-        profile = profile_by_name[profile_name]
-
-        for interest_name in interest_list:
-            profile_interest = ProfileInterest(
-                profile_id=profile.id,
-                interest_id=interest_by_name[interest_name].id
-            )
-            db.add(profile_interest)
-
-    db.commit()
-
-    reactions_data = [
+    demo_reactions_data = [
         ("Adam", "Ola", "like"),
         ("Ola", "Adam", "like"),
         ("Kasia", "Adam", "pass"),
@@ -139,48 +97,12 @@ def seed_demo_data(db: Session):
         ("Julia", "Marek", "like"),
     ]
 
-    for from_name, to_name, reaction_type in reactions_data:
-        reaction = Reaction(
-            from_profile_id=profile_by_name[from_name].id,
-            to_profile_id=profile_by_name[to_name].id,
-            reaction_type=reaction_type
-        )
-        db.add(reaction)
-
-    db.commit()
-
-    match_pairs = [
+    demo_match_pairs = [
         ("Adam", "Ola"),
         ("Marek", "Julia"),
     ]
 
-    created_matches = []
-
-    for name_1, name_2 in match_pairs:
-        profile_1 = profile_by_name[name_1]
-        profile_2 = profile_by_name[name_2]
-
-        smaller_id = min(profile_1.id, profile_2.id)
-        larger_id = max(profile_1.id, profile_2.id)
-
-        match = Match(
-            profile_1_id=smaller_id,
-            profile_2_id=larger_id
-        )
-        db.add(match)
-        created_matches.append((name_1, name_2, match))
-
-    db.commit()
-
-    for _, _, match in created_matches:
-        db.refresh(match)
-
-    match_by_pair = {
-        (name_1, name_2): match
-        for name_1, name_2, match in created_matches
-    }
-
-    messages_data = [
+    demo_messages_data = [
         {
             "pair": ("Adam", "Ola"),
             "sender": "Adam",
@@ -203,15 +125,231 @@ def seed_demo_data(db: Session):
         },
     ]
 
-    for item in messages_data:
+    first_names = [
+        "Adam", "Ola", "Kasia", "Marek", "Julia", "Ania", "Piotr", "Natalia", "Michał", "Zuzanna",
+        "Paweł", "Karolina", "Tomek", "Magda", "Krzysztof", "Emilia", "Mateusz", "Alicja", "Jakub", "Weronika"
+    ]
+
+    cities = [
+        "Warszawa", "Kraków", "Gdańsk", "Wrocław", "Poznań",
+        "Łódź", "Lublin", "Katowice", "Szczecin", "Bydgoszcz"
+    ]
+
+    bio_templates = [
+        "Lubię aktywnie spędzać czas i poznawać nowych ludzi.",
+        "Cenię dobrą rozmowę, muzykę i wspólne wyjścia.",
+        "Interesuję się kulturą, filmami i podróżami.",
+        "Najlepiej odpoczywam przy książce albo spacerze.",
+        "Szukam osób o podobnych zainteresowaniach i pozytywnej energii.",
+        "W wolnym czasie rozwijam swoje pasje i lubię próbować nowych rzeczy.",
+        "Lubię sport, dobrą kawę i ciekawe rozmowy.",
+        "Najbardziej cenię autentyczność, humor i wspólne zainteresowania.",
+    ]
+
+    def get_or_create_interest(name: str) -> Interest:
+        interest = db.query(Interest).filter(Interest.name == name).first()
+        if not interest:
+            interest = Interest(name=name)
+            db.add(interest)
+            db.commit()
+            db.refresh(interest)
+        return interest
+
+    def get_or_create_user(email: str, password: str) -> User:
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            user = User(
+                email=email,
+                password_hash=hash_password(password)
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        return user
+
+    def get_or_create_profile(
+            user_id: int,
+            display_name: str,
+            age: int,
+            bio: str,
+            city: str
+    ) -> Profile:
+        profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+        if not profile:
+            profile = Profile(
+                user_id=user_id,
+                display_name=display_name,
+                age=age,
+                bio=bio,
+                city=city
+            )
+            db.add(profile)
+            db.commit()
+            db.refresh(profile)
+        return profile
+
+    def ensure_profile_interest(profile_id: int, interest_id: int):
+        existing = (
+            db.query(ProfileInterest)
+            .filter(
+                ProfileInterest.profile_id == profile_id,
+                ProfileInterest.interest_id == interest_id
+            )
+            .first()
+        )
+        if not existing:
+            db.add(ProfileInterest(profile_id=profile_id, interest_id=interest_id))
+            db.commit()
+
+    def ensure_reaction(from_profile_id: int, to_profile_id: int, reaction_type: str):
+        existing = (
+            db.query(Reaction)
+            .filter(
+                Reaction.from_profile_id == from_profile_id,
+                Reaction.to_profile_id == to_profile_id
+            )
+            .first()
+        )
+        if not existing:
+            db.add(
+                Reaction(
+                    from_profile_id=from_profile_id,
+                    to_profile_id=to_profile_id,
+                    reaction_type=reaction_type
+                )
+            )
+            db.commit()
+
+    def get_or_create_match(profile_1_id: int, profile_2_id: int) -> Match:
+        smaller_id = min(profile_1_id, profile_2_id)
+        larger_id = max(profile_1_id, profile_2_id)
+
+        match = (
+            db.query(Match)
+            .filter(
+                Match.profile_1_id == smaller_id,
+                Match.profile_2_id == larger_id
+            )
+            .first()
+        )
+
+        if not match:
+            match = Match(
+                profile_1_id=smaller_id,
+                profile_2_id=larger_id
+            )
+            db.add(match)
+            db.commit()
+            db.refresh(match)
+
+        return match
+
+    def ensure_message(match_id: int, sender_profile_id: int, content: str):
+        existing = (
+            db.query(Message)
+            .filter(
+                Message.match_id == match_id,
+                Message.sender_profile_id == sender_profile_id,
+                Message.content == content
+            )
+            .first()
+        )
+        if not existing:
+            db.add(
+                Message(
+                    match_id=match_id,
+                    sender_profile_id=sender_profile_id,
+                    content=content
+                )
+            )
+            db.commit()
+
+    # 1. Interests
+    for name in interest_names:
+        get_or_create_interest(name)
+
+    interests = db.query(Interest).filter(Interest.name.in_(interest_names)).all()
+    interest_by_name = {interest.name: interest for interest in interests}
+
+    # 2. Demo users + profiles
+    profile_by_name = {}
+
+    for item in demo_users_data:
+        user = get_or_create_user(item["email"], item["password"])
+        profile = get_or_create_profile(
+            user_id=user.id,
+            display_name=item["display_name"],
+            age=item["age"],
+            bio=item["bio"],
+            city=item["city"]
+        )
+        profile_by_name[item["display_name"]] = profile
+
+    # 3. Demo profile interests
+    for profile_name, interest_list in demo_profile_interest_map.items():
+        profile = profile_by_name[profile_name]
+
+        for interest_name in interest_list:
+            ensure_profile_interest(
+                profile_id=profile.id,
+                interest_id=interest_by_name[interest_name].id
+            )
+
+    # 4. Demo reactions
+    for from_name, to_name, reaction_type in demo_reactions_data:
+        ensure_reaction(
+            from_profile_id=profile_by_name[from_name].id,
+            to_profile_id=profile_by_name[to_name].id,
+            reaction_type=reaction_type
+        )
+
+    # 5. Demo matches
+    match_by_pair = {}
+
+    for name_1, name_2 in demo_match_pairs:
+        match = get_or_create_match(
+            profile_1_id=profile_by_name[name_1].id,
+            profile_2_id=profile_by_name[name_2].id
+        )
+        match_by_pair[(name_1, name_2)] = match
+
+    # 6. Demo messages
+    for item in demo_messages_data:
         pair = item["pair"]
         match = match_by_pair[pair]
 
-        message = Message(
+        ensure_message(
             match_id=match.id,
             sender_profile_id=profile_by_name[item["sender"]].id,
             content=item["content"]
         )
-        db.add(message)
 
-    db.commit()
+    # 7. Generated users so that total seeded users = 100
+    # Mamy 5 demo, więc dokładamy 95 użytkowników generowanych.
+    for i in range(1, 96):
+        email = f"seed{i:03d}@example.com"
+        password = "test123456"
+
+        user = get_or_create_user(email, password)
+
+        first_name = first_names[(i - 1) % len(first_names)]
+        display_name = f"{first_name}_{i:03d}"
+        age = rng.randint(18, 30)
+        bio = rng.choice(bio_templates)
+        city = rng.choice(cities)
+
+        profile = get_or_create_profile(
+            user_id=user.id,
+            display_name=display_name,
+            age=age,
+            bio=bio,
+            city=city
+        )
+
+        chosen_interest_names = rng.sample(interest_names, rng.randint(3, 6))
+
+        for interest_name in chosen_interest_names:
+            ensure_profile_interest(
+                profile_id=profile.id,
+                interest_id=interest_by_name[interest_name].id
+            )
