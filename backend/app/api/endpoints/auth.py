@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from app.core.security import ALGORITHM, SECRET_KEY, create_access_token, verify_password
+from app.core.security import create_access_token, get_current_user, verify_password
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse
 
 router = APIRouter()
-security = HTTPBearer()
 
 
 @router.post("/auth/login", response_model=TokenResponse)
@@ -33,26 +30,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/auth/me")
-def get_me(
-        credentials: HTTPAuthorizationCredentials = Depends(security),
-        db: Session = Depends(get_db)
-):
-    token = credentials.credentials
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    user = db.query(User).filter(User.id == int(user_id)).first()
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
+def get_me(user: User = Depends(get_current_user)):
     return {
         "id": user.id,
         "email": user.email

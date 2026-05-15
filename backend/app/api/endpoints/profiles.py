@@ -5,6 +5,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.models.profile_photo import ProfilePhoto
@@ -78,6 +79,19 @@ def get_profiles(db: Session = Depends(get_db)):
     profiles = db.query(Profile).all()
 
     return [serialize_profile(profile) for profile in profiles]
+
+
+@router.get("/profiles/me")
+def get_my_profile(
+        user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    profile = db.query(Profile).filter(Profile.user_id == user.id).first()
+
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    return serialize_profile(profile)
 
 
 @router.patch("/profiles/{profile_id}")
