@@ -4,9 +4,20 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.profile import Profile
 from app.models.user import User
-from app.schemas.profile import ProfileCreate
+from app.schemas.profile import ProfileCreate, ProfileUpdate
 
 router = APIRouter()
+
+
+def serialize_profile(profile: Profile):
+    return {
+        "id": profile.id,
+        "user_id": profile.user_id,
+        "display_name": profile.display_name,
+        "age": profile.age,
+        "bio": profile.bio,
+        "city": profile.city
+    }
 
 
 @router.post("/profiles")
@@ -43,14 +54,29 @@ def create_profile(profile_data: ProfileCreate, db: Session = Depends(get_db)):
 def get_profiles(db: Session = Depends(get_db)):
     profiles = db.query(Profile).all()
 
-    return [
-        {
-            "id": profile.id,
-            "user_id": profile.user_id,
-            "display_name": profile.display_name,
-            "age": profile.age,
-            "bio": profile.bio,
-            "city": profile.city
-        }
-        for profile in profiles
-    ]
+    return [serialize_profile(profile) for profile in profiles]
+
+
+@router.patch("/profiles/{profile_id}")
+def update_profile(
+        profile_id: int,
+        profile_data: ProfileUpdate,
+        db: Session = Depends(get_db)
+):
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    if hasattr(profile_data, "model_dump"):
+        update_data = profile_data.model_dump(exclude_unset=True)
+    else:
+        update_data = profile_data.dict(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(profile, field, value)
+
+    db.commit()
+    db.refresh(profile)
+
+    return serialize_profile(profile)
