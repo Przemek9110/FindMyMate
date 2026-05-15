@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.interest import Interest
+from app.models.match import Match
 from app.models.profile import Profile
 from app.models.profile_interest import ProfileInterest
 
@@ -15,7 +16,26 @@ def discover_profiles(profile_id: int, db: Session = Depends(get_db)):
     if not current_profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    profiles = db.query(Profile).filter(Profile.id != profile_id).all()
+    matches = (
+        db.query(Match)
+        .filter(
+            (Match.profile_1_id == profile_id) |
+            (Match.profile_2_id == profile_id)
+        )
+        .all()
+    )
+
+    matched_profile_ids = {
+        match.profile_2_id if match.profile_1_id == profile_id else match.profile_1_id
+        for match in matches
+    }
+
+    profiles_query = db.query(Profile).filter(Profile.id != profile_id)
+
+    if matched_profile_ids:
+        profiles_query = profiles_query.filter(~Profile.id.in_(matched_profile_ids))
+
+    profiles = profiles_query.all()
 
     result = []
 
