@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.db.base import Base
@@ -15,10 +17,16 @@ from app.models.profile_interest import ProfileInterest
 from app.models.reaction import Reaction
 from app.models.match import Match
 from app.models.message import Message
+from app.models.profile_photo import ProfilePhoto
+
+
+UPLOADS_DIR = Path(__file__).resolve().parents[1] / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
@@ -46,4 +54,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.include_router(api_router)
