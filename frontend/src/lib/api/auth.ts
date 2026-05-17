@@ -111,3 +111,37 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
     token: token.access_token,
   };
 }
+
+export type UpdateCredentialsPayload = {
+  username: string;
+  current_password: string;
+  new_password: string;
+};
+
+export async function updateCredentials(
+  payload: UpdateCredentialsPayload
+): Promise<AuthResponse["user"]> {
+  if (!payload.username.trim()) {
+    throw new Error("Nazwa użytkownika jest wymagana.");
+  }
+
+  if (!payload.current_password.trim()) {
+    throw new Error("Aktualne hasło jest wymagane.");
+  }
+
+  if (!payload.new_password.trim()) {
+    throw new Error("Nowe hasło jest wymagane.");
+  }
+
+  const user = await apiFetch<BackendUser>("/auth/credentials", {
+    method: "PUT",
+    auth: true,
+    body: JSON.stringify({
+      username: payload.username.trim(),
+      current_password: payload.current_password,
+      new_password: payload.new_password,
+    }),
+  });
+
+  return mapBackendUser(user);
+}

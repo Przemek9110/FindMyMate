@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useMatchesStore } from "@/store/matchesStore";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -287,6 +287,12 @@ function ChatPageContent() {
                     <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70 transition group-hover:-translate-y-0.5 group-hover:shadow-md group-hover:ring-primary/25">
                       <CardContent className="flex items-center gap-4 p-4">
                         <Avatar className="size-14 border-4 border-background shadow-sm">
+                          {match.photoUrl ? (
+                            <AvatarImage
+                              src={match.photoUrl}
+                              alt={`Zdjęcie profilu ${match.username}`}
+                            />
+                          ) : null}
                           <AvatarFallback className="bg-primary/10 text-lg font-black text-primary">
                             {match.username.charAt(0).toUpperCase()}
                           </AvatarFallback>
@@ -352,6 +358,12 @@ function ChatPageContent() {
               <div className="flex items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-4">
                   <Avatar className="size-14 border-4 border-background shadow-sm">
+                    {selectedMatch.photoUrl ? (
+                      <AvatarImage
+                        src={selectedMatch.photoUrl}
+                        alt={`Zdjęcie profilu ${selectedMatch.username}`}
+                      />
+                    ) : null}
                     <AvatarFallback className="bg-primary text-lg font-black text-primary-foreground">
                       {selectedMatch.username.charAt(0).toUpperCase()}
                     </AvatarFallback>

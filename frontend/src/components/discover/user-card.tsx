@@ -6,7 +6,7 @@ import {
   ThumbsUp,
   UserRound,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -16,6 +16,7 @@ type User = {
   username: string;
   bio: string;
   interests: string[];
+  photoUrl?: string | null;
   age?: number;
   city?: string;
 };
@@ -64,6 +65,12 @@ export function UserCard({
 
         <div className="absolute bottom-5 left-5 right-5 flex items-end gap-4">
           <Avatar className="size-24 border-4 border-card shadow-xl">
+            {user.photoUrl ? (
+              <AvatarImage
+                src={user.photoUrl}
+                alt={`Zdjęcie profilu ${user.username}`}
+              />
+            ) : null}
             <AvatarFallback className="bg-primary text-3xl font-black text-primary-foreground">
               {user.username.charAt(0).toUpperCase()}
             </AvatarFallback>

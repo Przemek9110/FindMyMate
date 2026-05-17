@@ -1,4 +1,5 @@
 import { apiFetch } from "./api";
+import { getProfilePhotoUrl } from "./profile";
 
 type BackendDiscoverCandidate = {
   id: number;
@@ -25,6 +26,7 @@ export type DiscoverUser = {
   bio: string;
   city: string;
   interests: string[];
+  photoUrl?: string | null;
   incomingReaction: "like" | "pass" | "none";
   matchId?: number;
 };
@@ -56,6 +58,18 @@ function mapDiscoverUser(candidate: BackendDiscoverCandidate): DiscoverUser {
   };
 }
 
+async function mapDiscoverUserWithPhoto(
+  candidate: BackendDiscoverCandidate
+): Promise<DiscoverUser> {
+  const user = mapDiscoverUser(candidate);
+  const photoUrl = await getProfilePhotoUrl(candidate.id);
+
+  return {
+    ...user,
+    photoUrl,
+  };
+}
+
 export async function getDiscoverUsers(
   currentProfileId: number | string
 ): Promise<DiscoverUser[]> {
@@ -70,7 +84,7 @@ export async function getDiscoverUsers(
     }
   );
 
-  return data.candidates.map(mapDiscoverUser);
+  return Promise.all(data.candidates.map(mapDiscoverUserWithPhoto));
 }
 
 export async function sendReaction(

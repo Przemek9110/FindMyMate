@@ -22,7 +22,7 @@ export function GuestRoute({ children }: GuestRouteProps) {
     }
 
     if (isAuthenticated) {
-      router.replace("/discover");
+      router.replace("/");
     }
   }, [hasHydrated, isAuthenticated, router]);
 

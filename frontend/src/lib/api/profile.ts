@@ -1,4 +1,9 @@
 import { apiFetch } from "./api";
+import { useAuthStore } from "@/store/authStore";
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
 
 export type BackendProfile = {
   id: number;
@@ -15,6 +20,7 @@ export type Profile = Omit<BackendProfile, "bio" | "city"> & {
   bio: string;
   city: string;
   interests: string[];
+  photoUrl?: string | null;
 };
 
 export type ProfileCreatePayload = {
@@ -199,7 +205,45 @@ export type ProfilePhotoResponse = {
   profile_id?: number;
   filename?: string;
   content_type?: string;
+  photo_url?: string;
 };
+
+export async function getProfilePhotoUrl(
+  profileId: number | string
+): Promise<string | null> {
+  try {
+    const token = useAuthStore.getState().token;
+    const response = await fetch(`${API_URL}/profiles/${profileId}/photo`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (contentType.startsWith("image/")) {
+      return URL.createObjectURL(await response.blob());
+    }
+
+    if (contentType.includes("application/json")) {
+      const data = (await response.json()) as ProfilePhotoResponse;
+
+      if (!data.photo_url) {
+        return null;
+      }
+
+      return data.photo_url.startsWith("http")
+        ? data.photo_url
+        : `${API_URL}${data.photo_url}`;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export async function uploadProfilePhoto(
   profileId: number | string,

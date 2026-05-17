@@ -10,7 +10,7 @@ import {
   Moon,
   Palette,
   RefreshCcw,
-  Settings,
+  Save,
   ShieldCheck,
   Sun,
   Trash2,
@@ -38,6 +38,7 @@ import {
   uploadProfilePhoto,
   type Profile,
 } from "@/lib/api/profile";
+import { updateCredentials } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -84,6 +85,9 @@ const sections: {
 
 export default function SettingsPage() {
   const authUser = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const setAuth = useAuthStore((state) => state.setAuth);
+
   const [activeSection, setActiveSection] =
     useState<SettingsSection>("profile");
 
@@ -96,9 +100,23 @@ export default function SettingsPage() {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
 
+  const [accountUsername, setAccountUsername] = useState(
+    authUser?.username ?? ""
+  );
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
+
   const showProfileSuccess = (message: string) => {
     setProfileSuccess(message);
     window.setTimeout(() => setProfileSuccess(null), 3000);
+  };
+
+  const showAccountSuccess = (message: string) => {
+    setAccountSuccess(message);
+    window.setTimeout(() => setAccountSuccess(null), 3000);
   };
 
   const setLightTheme = () => {
@@ -165,6 +183,10 @@ export default function SettingsPage() {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    setAccountUsername(authUser?.username ?? "");
+  }, [authUser?.username]);
 
   const saveInterests = async (profileId: number, interestNames: string[]) => {
     let availableInterests = await getInterests();
@@ -256,6 +278,70 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveAccount = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isSavingAccount) {
+      return;
+    }
+
+    setAccountError(null);
+    setAccountSuccess(null);
+
+    if (!accountUsername.trim()) {
+      setAccountError("Login nie może być pusty.");
+      return;
+    }
+
+    if (!currentPassword.trim()) {
+      setAccountError("Podaj aktualne hasło.");
+      return;
+    }
+
+    if (!newPassword.trim()) {
+      setAccountError("Podaj nowe hasło.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setAccountError("Nowe hasło powinno mieć co najmniej 6 znaków.");
+      return;
+    }
+
+    if (!token) {
+      setAccountError("Brak aktywnej sesji. Zaloguj się ponownie.");
+      return;
+    }
+
+    try {
+      setIsSavingAccount(true);
+
+      const updatedUser = await updateCredentials({
+        username: accountUsername,
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+
+      setAuth({
+        user: updatedUser,
+        token,
+      });
+
+      setCurrentPassword("");
+      setNewPassword("");
+      showAccountSuccess("Dane konta zostały zapisane.");
+    } catch (error) {
+      console.error("Błąd podczas zapisywania danych konta:", error);
+      setAccountError(
+        error instanceof Error
+          ? error.message
+          : "Nie udało się zapisać danych konta."
+      );
+    } finally {
+      setIsSavingAccount(false);
+    }
+  };
+
   const handlePhotoChange = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -302,7 +388,7 @@ export default function SettingsPage() {
 
       reader.readAsDataURL(file);
 
-      showProfileSuccess("Zdjęcie profilu wysłane do backendu.");
+      showProfileSuccess("Zdjęcie profilu zostało zaktualizowane.");
     } catch (error) {
       console.error("Błąd podczas wysyłania zdjęcia:", error);
       setProfileError("Nie udało się wysłać zdjęcia profilu.");
@@ -319,7 +405,7 @@ export default function SettingsPage() {
     removeProfilePhoto(authUser.id);
     setProfilePhoto(null);
     showProfileSuccess(
-      "Zdjęcie usunięte z podglądu. Backend nie ma jeszcze obsługi usuwania zdjęcia."
+      "Zdjęcie usunięte z podglądu."
     );
   };
 
@@ -467,68 +553,106 @@ export default function SettingsPage() {
           </CardTitle>
 
           <CardDescription className="text-sm leading-6 text-foreground/65">
-            Backend nie ma jeszcze endpointów zmiany loginu, e-maila ani hasła,
-            więc pola są przygotowane wizualnie na kolejny etap.
+            Zmień login oraz hasło do konta. E-mail jest obecnie tylko do
+            podglądu.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="grid gap-5 p-6">
-          <div className="grid gap-2">
-            <Label htmlFor="email">Adres e-mail</Label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="email"
-                value={authUser?.email ?? ""}
-                disabled
-                onChange={() => undefined}
-                className="h-11 pl-9"
-              />
-            </div>
-          </div>
+        <CardContent className="p-6">
+          <form onSubmit={handleSaveAccount} className="grid gap-5" noValidate>
+            {accountError ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 shadow-sm dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+                {accountError}
+              </div>
+            ) : null}
 
-          <div className="grid gap-2">
-            <Label htmlFor="username">Login</Label>
-            <div className="relative">
-              <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="username"
-                value={authUser?.username ?? ""}
-                disabled
-                onChange={() => undefined}
-                className="h-11 pl-9"
-              />
-            </div>
-          </div>
+            {accountSuccess ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
+                {accountSuccess}
+              </div>
+            ) : null}
 
-          <div className="grid gap-5 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="current-password">Aktualne hasło</Label>
-              <Input
-                id="current-password"
-                type="password"
-                placeholder="••••••••"
-                disabled
-                className="h-11"
-              />
+              <Label htmlFor="email">Adres e-mail</Label>
+
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  id="email"
+                  value={authUser?.email ?? ""}
+                  disabled
+                  onChange={() => undefined}
+                  className="h-11 pl-9"
+                />
+              </div>
+
+              <p className="text-xs text-foreground/55">
+                Nowy endpoint zmienia login i hasło, ale nie adres e-mail.
+              </p>
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="new-password">Nowe hasło</Label>
-              <Input
-                id="new-password"
-                type="password"
-                placeholder="••••••••"
-                disabled
-                className="h-11"
-              />
-            </div>
-          </div>
+              <Label htmlFor="username">Login</Label>
 
-          <Button type="button" disabled className="h-11 w-fit rounded-full">
-            <Mail className="size-4" />
-            Zapisz dane
-          </Button>
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  id="username"
+                  value={accountUsername}
+                  onChange={(event) => setAccountUsername(event.target.value)}
+                  disabled={isSavingAccount}
+                  className="h-11 pl-9"
+                  placeholder="Nowy login"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="current-password">Aktualne hasło</Label>
+
+                <Input
+                  id="current-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  disabled={isSavingAccount}
+                  className="h-11"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="new-password">Nowe hasło</Label>
+
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  disabled={isSavingAccount}
+                  className="h-11"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-primary/5 p-4 text-sm leading-6 text-foreground/68 ring-1 ring-primary/10">
+              Dla bezpieczeństwa wymagane jest aktualne hasło. Po zapisaniu
+              login odświeży się w aplikacji automatycznie.
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isSavingAccount}
+              className="h-11 w-fit rounded-full font-bold shadow-md shadow-primary/20"
+            >
+              <Save className="size-4" />
+              {isSavingAccount ? "Zapisywanie..." : "Zapisz dane konta"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     );

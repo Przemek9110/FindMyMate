@@ -79,7 +79,7 @@ export default function LoginPage() {
         token: response.token,
       });
 
-      router.replace("/discover");
+      router.replace("/");
     } catch (err) {
       console.error("Błąd logowania:", err);
       setError("Nie udało się zalogować. Sprawdź dane i spróbuj ponownie.");

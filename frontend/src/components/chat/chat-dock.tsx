@@ -8,7 +8,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -260,6 +260,12 @@ export function ChatDock() {
                     className="group flex w-full items-center gap-3 rounded-3xl border bg-background/70 p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:shadow-sm"
                   >
                     <Avatar className="size-11 border-4 border-background shadow-sm">
+                      {match.photoUrl ? (
+                        <AvatarImage
+                          src={match.photoUrl}
+                          alt={`Zdjęcie profilu ${match.username}`}
+                        />
+                      ) : null}
                       <AvatarFallback className="bg-primary/10 text-base font-black text-primary">
                         {match.username.charAt(0).toUpperCase()}
                       </AvatarFallback>

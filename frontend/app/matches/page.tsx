@@ -17,11 +17,12 @@ import {
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { MatchCard } from "@/components/matches/match-card";
 import { useMatchesStore } from "@/store/matchesStore";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getProfile } from "@/lib/api/profile";
+import { getProfile, type Profile } from "@/lib/api/profile";
 import type { DiscoverUser } from "@/lib/api/discover";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -35,6 +36,7 @@ export default function MatchesPage() {
   const error = useMatchesStore((state) => state.error);
   const isLoading = useMatchesStore((state) => state.isLoading);
 
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [missingProfile, setMissingProfile] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [previewProfile, setPreviewProfile] = useState<DiscoverUser | null>(
@@ -47,34 +49,24 @@ export default function MatchesPage() {
 
     async function loadMatches() {
       try {
-        let currentProfileId = localStorage.getItem(CURRENT_PROFILE_ID_KEY);
+        const profileData = await getProfile();
 
-        if (!currentProfileId) {
-          const profile = await getProfile();
-
-          if (cancelled) {
-            return;
-          }
-
-          currentProfileId = String(profile.id);
-          localStorage.setItem(CURRENT_PROFILE_ID_KEY, currentProfileId);
-        }
-
-        if (!currentProfileId) {
-          if (!cancelled) {
-            setMissingProfile(true);
-          }
-
+        if (cancelled) {
           return;
         }
 
-        if (!cancelled) {
-          setMissingProfile(false);
-          await fetchMatches(currentProfileId);
-        }
+        const currentProfileId = String(profileData.id);
+
+        setProfile(profileData);
+        setMissingProfile(false);
+        localStorage.setItem(CURRENT_PROFILE_ID_KEY, currentProfileId);
+
+        await fetchMatches(currentProfileId);
       } catch {
         if (!cancelled) {
+          setProfile(null);
           setMissingProfile(true);
+          localStorage.removeItem(CURRENT_PROFILE_ID_KEY);
         }
       }
     }
@@ -91,13 +83,46 @@ export default function MatchesPage() {
   };
 
   const handleRefresh = async () => {
-    const currentProfileId = localStorage.getItem(CURRENT_PROFILE_ID_KEY);
+    try {
+      const profileData = await getProfile();
+      const currentProfileId = String(profileData.id);
 
-    if (!currentProfileId) {
-      return;
+      setProfile(profileData);
+      setMissingProfile(false);
+      localStorage.setItem(CURRENT_PROFILE_ID_KEY, currentProfileId);
+
+      await fetchMatches(currentProfileId);
+    } catch {
+      setProfile(null);
+      setMissingProfile(true);
+      localStorage.removeItem(CURRENT_PROFILE_ID_KEY);
+    }
+  };
+
+  const getSharedInterests = (interests: string[]) => {
+    if (!profile?.interests.length) {
+      return [];
     }
 
-    await fetchMatches(currentProfileId);
+    const myInterests = new Set(
+      profile.interests.map((interest) => interest.toLowerCase())
+    );
+
+    return interests.filter((interest) =>
+      myInterests.has(interest.toLowerCase())
+    );
+  };
+
+  const previewSharedInterests = previewProfile
+    ? getSharedInterests(previewProfile.interests)
+    : [];
+
+  const previewSharedInterestsSet = new Set(
+    previewSharedInterests.map((interest) => interest.toLowerCase())
+  );
+
+  const isPreviewSharedInterest = (interest: string) => {
+    return previewSharedInterestsSet.has(interest.toLowerCase());
   };
 
   return (
@@ -110,7 +135,7 @@ export default function MatchesPage() {
           <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <PageHeader
               eyebrow="Dopasowania"
-              title={`Twoje dopasowania`}
+              title="Twoje dopasowania"
               description="Tutaj trafiają osoby, z którymi macie wzajemne polubienie. Otwórz profil albo przejdź od razu do rozmowy."
             />
 
@@ -189,10 +214,12 @@ export default function MatchesPage() {
                   </div>
 
                   <div className="rounded-2xl border bg-background/70 p-4">
-                    <p className="text-sm font-bold">Następny krok</p>
+                    <p className="text-sm font-bold">
+                      Wspólne zainteresowania
+                    </p>
                     <p className="mt-2 text-sm leading-6 text-foreground/65">
-                      Otwórz podgląd profilu, sprawdź zainteresowania i
-                      rozpocznij rozmowę.
+                      Wspólne tagi są wyróżnione mocniejszym kolorem, żeby
+                      szybciej znaleźć temat do rozmowy.
                     </p>
                   </div>
                 </div>
@@ -301,11 +328,14 @@ export default function MatchesPage() {
                         Lista dopasowań
                       </CardTitle>
                       <p className="mt-1 text-sm text-foreground/60">
-                        Przewijaj listę bez rozciągania całej strony.
+                        Wspólne zainteresowania są wyróżnione kolorem.
                       </p>
                     </div>
 
-                    <Badge variant="accent" className="w-fit rounded-full px-3 py-1">
+                    <Badge
+                      variant="accent"
+                      className="w-fit rounded-full px-3 py-1"
+                    >
                       {matches.length}{" "}
                       {matches.length === 1 ? "dopasowanie" : "dopasowań"}
                     </Badge>
@@ -322,7 +352,9 @@ export default function MatchesPage() {
                         age={match.age}
                         bio={match.bio}
                         city={match.city}
+                        photoUrl={match.photoUrl}
                         interests={match.interests}
+                        sharedInterests={getSharedInterests(match.interests)}
                         isExpanded={expandedMatchId === match.id}
                         onToggle={() =>
                           setExpandedMatchId((current) =>
@@ -356,22 +388,38 @@ export default function MatchesPage() {
             </Button>
 
             <CardHeader className="border-b bg-muted/30 px-6 pb-5 pt-6 pr-14">
-              <p className="text-sm font-medium text-primary">
-                Pełny podgląd profilu
-              </p>
+              <div className="flex items-center gap-4">
+                <Avatar className="size-14 border-4 border-background shadow-sm">
+                  {previewProfile.photoUrl ? (
+                    <AvatarImage
+                      src={previewProfile.photoUrl}
+                      alt={`Zdjęcie profilu ${previewProfile.username}`}
+                    />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10 text-lg font-black text-primary">
+                    {previewProfile.username.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
 
-              <CardTitle className="mt-1 text-2xl leading-tight">
-                {previewProfile.username}
-              </CardTitle>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-primary">
+                    Pełny podgląd profilu
+                  </p>
 
-              {[previewProfile.age, previewProfile.city].filter(Boolean)
-                .length > 0 ? (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {[previewProfile.age, previewProfile.city]
-                    .filter(Boolean)
-                    .join(" • ")}
-                </p>
-              ) : null}
+                  <CardTitle className="mt-1 text-2xl leading-tight">
+                    {previewProfile.username}
+                  </CardTitle>
+
+                  {[previewProfile.age, previewProfile.city].filter(Boolean)
+                    .length > 0 ? (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {[previewProfile.age, previewProfile.city]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
             </CardHeader>
 
             <CardContent className="space-y-6 p-6">
@@ -383,14 +431,26 @@ export default function MatchesPage() {
               </section>
 
               <section className="space-y-3">
-                <h3 className="text-sm font-semibold">Zainteresowania</h3>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold">Zainteresowania</h3>
+
+                  {previewSharedInterests.length > 0 ? (
+                    <Badge variant="accent" className="rounded-full px-3 py-1">
+                      {previewSharedInterests.length} wspólne
+                    </Badge>
+                  ) : null}
+                </div>
 
                 {previewProfile.interests.length > 0 ? (
                   <div className="flex flex-wrap gap-2 rounded-2xl border bg-muted/20 p-3">
                     {previewProfile.interests.map((interest) => (
                       <Badge
                         key={interest}
-                        variant="secondary"
+                        variant={
+                          isPreviewSharedInterest(interest)
+                            ? "accent"
+                            : "secondary"
+                        }
                         className="rounded-full px-3 py-1"
                       >
                         {interest}
@@ -402,6 +462,12 @@ export default function MatchesPage() {
                     Brak zapisanych zainteresowań.
                   </div>
                 )}
+
+                {previewSharedInterests.length > 0 ? (
+                  <p className="text-xs leading-5 text-foreground/55">
+                    Wyróżnione tagi to zainteresowania, które macie wspólne.
+                  </p>
+                ) : null}
               </section>
 
               <Button

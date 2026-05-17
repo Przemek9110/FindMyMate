@@ -9,7 +9,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +20,9 @@ type MatchCardProps = {
   age?: number;
   bio?: string;
   city?: string;
+  photoUrl?: string | null;
   interests: string[];
+  sharedInterests?: string[];
   isExpanded: boolean;
   onToggle: () => void;
   onOpenChat: () => void;
@@ -33,7 +35,9 @@ export function MatchCard({
   age,
   bio,
   city,
+  photoUrl,
   interests,
+  sharedInterests = [],
   isExpanded,
   onToggle,
   onOpenChat,
@@ -41,6 +45,15 @@ export function MatchCard({
 }: MatchCardProps) {
   const meta = [city, age].filter(Boolean).join(" • ");
   const hasInterests = interests.length > 0;
+  const hasSharedInterests = sharedInterests.length > 0;
+
+  const sharedInterestsSet = new Set(
+    sharedInterests.map((interest) => interest.toLowerCase())
+  );
+
+  const isSharedInterest = (interest: string) => {
+    return sharedInterestsSet.has(interest.toLowerCase());
+  };
 
   return (
     <Card
@@ -56,6 +69,13 @@ export function MatchCard({
             aria-expanded={isExpanded}
           >
             <Avatar className="size-16 border-4 border-background shadow-sm">
+              {photoUrl ? (
+                <AvatarImage
+                  src={photoUrl}
+                  alt={`Zdjęcie profilu ${username}`}
+                />
+              ) : null}
+
               <AvatarFallback className="bg-primary/10 text-xl font-black text-primary">
                 {username.charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -73,6 +93,15 @@ export function MatchCard({
                 >
                   match
                 </Badge>
+
+                {hasSharedInterests ? (
+                  <Badge
+                    variant="outline"
+                    className="hidden shrink-0 rounded-full border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs text-primary sm:inline-flex"
+                  >
+                    {sharedInterests.length} wspólne
+                  </Badge>
+                ) : null}
               </div>
 
               {meta ? (
@@ -92,7 +121,7 @@ export function MatchCard({
                   {interests.slice(0, 3).map((interest) => (
                     <Badge
                       key={interest}
-                      variant="secondary"
+                      variant={isSharedInterest(interest) ? "accent" : "secondary"}
                       className="rounded-full px-2.5 py-0.5 text-xs"
                     >
                       {interest}
@@ -158,14 +187,22 @@ export function MatchCard({
               </section>
 
               <section className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Sparkles className="size-3.5" />
-                  </span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Sparkles className="size-3.5" />
+                    </span>
 
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">
-                    Zainteresowania
-                  </p>
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">
+                      Zainteresowania
+                    </p>
+                  </div>
+
+                  {hasSharedInterests ? (
+                    <Badge variant="accent" className="rounded-full px-3 py-1">
+                      {sharedInterests.length} wspólne
+                    </Badge>
+                  ) : null}
                 </div>
 
                 {hasInterests ? (
@@ -173,7 +210,9 @@ export function MatchCard({
                     {interests.map((interest) => (
                       <Badge
                         key={interest}
-                        variant="secondary"
+                        variant={
+                          isSharedInterest(interest) ? "accent" : "secondary"
+                        }
                         className="rounded-full px-3 py-1"
                       >
                         {interest}
@@ -185,6 +224,12 @@ export function MatchCard({
                     Brak zapisanych zainteresowań.
                   </div>
                 )}
+
+                {hasSharedInterests ? (
+                  <p className="text-xs leading-5 text-foreground/55">
+                    Wyróżnione tagi to zainteresowania, które macie wspólne.
+                  </p>
+                ) : null}
               </section>
 
               <div className="grid gap-2 sm:grid-cols-2">

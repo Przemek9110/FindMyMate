@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { apiFetch } from "@/lib/api/api";
 import type { DiscoverUser } from "@/lib/api/discover";
-import { getProfileInterests } from "@/lib/api/profile";
+import { getProfileInterests, getProfilePhotoUrl } from "@/lib/api/profile";
 
 type BackendMatch = {
   match_id: number;
@@ -41,30 +41,42 @@ function mapMatch(match: BackendMatch): DiscoverUser {
     bio: match.bio ?? "",
     city: match.city ?? "",
     interests: match.interests ?? [],
+    photoUrl: null,
     incomingReaction: "like",
     matchId: match.match_id,
   };
 }
 
 async function mapMatchWithInterests(match: BackendMatch): Promise<DiscoverUser> {
+  const photoUrl = await getProfilePhotoUrl(match.profile_id);
+
   if (match.interests && match.interests.length > 0) {
-    return mapMatch(match);
+    return {
+      ...mapMatch(match),
+      photoUrl,
+    };
   }
 
   try {
     const { interests } = await getProfileInterests(match.profile_id);
 
-    return mapMatch({
-      ...match,
-      interests: interests.map((interest) => interest.name),
-    });
+    return {
+      ...mapMatch({
+        ...match,
+        interests: interests.map((interest) => interest.name),
+      }),
+      photoUrl,
+    };
   } catch (error) {
     console.error(
       `Nie udało się pobrać zainteresowań profilu ${match.profile_id}:`,
       error
     );
 
-    return mapMatch(match);
+    return {
+      ...mapMatch(match),
+      photoUrl,
+    };
   }
 }
 
