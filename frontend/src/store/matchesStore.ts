@@ -64,7 +64,7 @@ export const useMatchesStore = create<MatchesState>()(
             error:
               error instanceof Error
                 ? error.message
-                : "Nie udalo sie pobrac matchy",
+                : "Nie udało się pobrać dopasowań",
             isLoading: false,
           });
         }

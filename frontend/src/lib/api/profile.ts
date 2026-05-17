@@ -90,13 +90,19 @@ export async function getProfileByUserId(
 }
 
 export async function getProfile(): Promise<Profile> {
-  const profiles = await getProfiles();
+  const profile = await apiFetch<BackendProfile>("/profiles/me", {
+    auth: true,
+  });
 
-  if (!profiles[0]) {
-    throw new Error("Profile not found");
+  try {
+    const { interests } = await getProfileInterests(profile.id);
+    return mapProfile(
+      profile,
+      interests.map((interest) => interest.name)
+    );
+  } catch {
+    return mapProfile(profile);
   }
-
-  return profiles[0];
 }
 
 export async function createProfile(
@@ -138,8 +144,31 @@ export async function getProfileInterests(
   return apiFetch<ProfileInterestsResponse>(`/profiles/${profileId}/interests`);
 }
 
-export async function updateProfile<T extends { username: string; bio: string; interests: string[] }>(
+export async function updateProfile<
+  T extends {
+    id: number;
+    age: number;
+    username: string;
+    display_name?: string;
+    bio: string;
+    city: string;
+    interests: string[];
+  },
+>(
   updated: T
 ): Promise<T> {
-  return updated;
+  const profile = await apiFetch<BackendProfile>(`/profiles/${updated.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      display_name: updated.username || updated.display_name,
+      age: updated.age,
+      bio: updated.bio || null,
+      city: updated.city || null,
+    }),
+  });
+
+  return {
+    ...updated,
+    ...mapProfile(profile, updated.interests),
+  };
 }

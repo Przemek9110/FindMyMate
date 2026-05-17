@@ -2,7 +2,7 @@ import { useAuthStore } from "@/store/authStore";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
+  "http://backend:8000";
 
 type ApiRequestOptions = RequestInit & {
   auth?: boolean;
