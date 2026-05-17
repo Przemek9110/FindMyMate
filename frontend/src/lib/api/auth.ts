@@ -35,6 +35,22 @@ export type AuthResponse = {
   token: string;
 };
 
+function mapBackendUser(user: BackendUser): AuthResponse["user"] {
+  return {
+    id: String(user.id),
+    username: user.username || user.email.split("@")[0],
+    email: user.email,
+  };
+}
+
+function buildAuthorizationHeader(token: TokenResponse): string {
+  const tokenType = token.token_type || "Bearer";
+
+  return `${tokenType.charAt(0).toUpperCase()}${tokenType.slice(1)} ${
+    token.access_token
+  }`;
+}
+
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
   if (!payload.email || !payload.password) {
     throw new Error("E-mail i hasło są wymagane.");
@@ -42,21 +58,19 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
 
   const token = await apiFetch<TokenResponse>("/auth/login", {
     method: "POST",
+    auth: false,
     body: JSON.stringify(payload),
   });
 
   const user = await apiFetch<BackendUser>("/auth/me", {
+    auth: false,
     headers: {
-      Authorization: `${token.token_type} ${token.access_token}`,
+      Authorization: buildAuthorizationHeader(token),
     },
   });
 
   return {
-    user: {
-      id: String(user.id),
-      username: user.email.split("@")[0],
-      email: user.email,
-    },
+    user: mapBackendUser(user),
     token: token.access_token,
   };
 }
@@ -66,8 +80,9 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
     throw new Error("E-mail i hasło są wymagane.");
   }
 
-  const user = await apiFetch<CreateUserResponse>("/users", {
+  await apiFetch<CreateUserResponse>("/users", {
     method: "POST",
+    auth: false,
     body: JSON.stringify({
       username: payload.username,
       email: payload.email,
@@ -77,18 +92,22 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
 
   const token = await apiFetch<TokenResponse>("/auth/login", {
     method: "POST",
+    auth: false,
     body: JSON.stringify({
       email: payload.email,
       password: payload.password,
     }),
   });
 
-  return {
-    user: {
-      id: String(user.id),
-      username: user.username,
-      email: user.email,
+  const user = await apiFetch<BackendUser>("/auth/me", {
+    auth: false,
+    headers: {
+      Authorization: buildAuthorizationHeader(token),
     },
+  });
+
+  return {
+    user: mapBackendUser(user),
     token: token.access_token,
   };
 }

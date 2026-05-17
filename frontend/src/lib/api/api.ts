@@ -2,9 +2,14 @@ import { useAuthStore } from "@/store/authStore";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://backend:8000";
+  "http://localhost:8000";
 
 type ApiRequestOptions = RequestInit & {
+  /**
+   * auth:
+   * - true / undefined: dołącz token, jeśli istnieje
+   * - false: nie dołączaj tokena
+   */
   auth?: boolean;
 };
 
@@ -46,16 +51,19 @@ function getErrorMessage(data: unknown, fallback: string) {
 
 export async function apiFetch<T>(
   endpoint: string,
-  options: ApiRequestOptions = {}
+  options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { auth = false, headers, ...restOptions } = options;
+  const { auth = true, headers, ...restOptions } = options;
+
   const token = useAuthStore.getState().token;
   const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+  const isFormData = restOptions.body instanceof FormData;
 
   const response = await fetch(`${API_URL}${path}`, {
     ...restOptions,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(auth && token ? { Authorization: `Bearer ${token}` } : {}),
       ...(headers || {}),
     },
@@ -67,6 +75,10 @@ export async function apiFetch<T>(
     : await response.text();
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      useAuthStore.getState().logout();
+    }
+
     throw new Error(getErrorMessage(data, `API error ${response.status}`));
   }
 

@@ -64,29 +64,46 @@ function mapProfile(profile: BackendProfile, interests: string[] = []): Profile 
   };
 }
 
+function mapInterestsToNames(interests: Interest[]): string[] {
+  return interests.map((interest) => interest.name);
+}
+
+async function getProfileWithInterests(
+  profile: BackendProfile
+): Promise<Profile> {
+  try {
+    const { interests } = await getProfileInterests(profile.id);
+    return mapProfile(profile, mapInterestsToNames(interests));
+  } catch {
+    return mapProfile(profile);
+  }
+}
+
 export async function getProfiles(): Promise<Profile[]> {
-  const profiles = await apiFetch<BackendProfile[]>("/profiles");
+  const profiles = await apiFetch<BackendProfile[]>("/profiles", {
+    auth: true,
+  });
 
   return Promise.all(
-    profiles.map(async (profile) => {
-      try {
-        const { interests } = await getProfileInterests(profile.id);
-        return mapProfile(
-          profile,
-          interests.map((interest) => interest.name)
-        );
-      } catch {
-        return mapProfile(profile);
-      }
-    })
+    profiles.map((profile) => getProfileWithInterests(profile))
   );
 }
 
 export async function getProfileByUserId(
   userId: number | string
 ): Promise<Profile | null> {
-  const profiles = await getProfiles();
-  return profiles.find((profile) => profile.user_id === Number(userId)) ?? null;
+  const profiles = await apiFetch<BackendProfile[]>("/profiles", {
+    auth: true,
+  });
+
+  const profile =
+    profiles.find((profile) => profile.user_id === Number(userId)) ?? null;
+
+  if (!profile) {
+    return null;
+  }
+
+  return getProfileWithInterests(profile);
 }
 
 export async function getProfile(): Promise<Profile> {
@@ -94,15 +111,7 @@ export async function getProfile(): Promise<Profile> {
     auth: true,
   });
 
-  try {
-    const { interests } = await getProfileInterests(profile.id);
-    return mapProfile(
-      profile,
-      interests.map((interest) => interest.name)
-    );
-  } catch {
-    return mapProfile(profile);
-  }
+  return getProfileWithInterests(profile);
 }
 
 export async function createProfile(
@@ -110,17 +119,23 @@ export async function createProfile(
 ): Promise<ProfileCreateResponse> {
   return apiFetch<ProfileCreateResponse>("/profiles", {
     method: "POST",
+    auth: true,
     body: JSON.stringify(payload),
   });
 }
 
 export async function getInterests(): Promise<Interest[]> {
-  return apiFetch<Interest[]>("/interests");
+  return apiFetch<Interest[]>("/interests", {
+    auth: true,
+  });
 }
 
-export async function createInterest(name: string): Promise<InterestCreateResponse> {
+export async function createInterest(
+  name: string
+): Promise<InterestCreateResponse> {
   return apiFetch<InterestCreateResponse>("/interests", {
     method: "POST",
+    auth: true,
     body: JSON.stringify({ name }),
   });
 }
@@ -131,6 +146,7 @@ export async function assignInterest(
 ): Promise<ProfileInterestResponse> {
   return apiFetch<ProfileInterestResponse>("/profile-interests", {
     method: "POST",
+    auth: true,
     body: JSON.stringify({
       profile_id: Number(profileId),
       interest_id: Number(interestId),
@@ -141,7 +157,12 @@ export async function assignInterest(
 export async function getProfileInterests(
   profileId: number | string
 ): Promise<ProfileInterestsResponse> {
-  return apiFetch<ProfileInterestsResponse>(`/profiles/${profileId}/interests`);
+  return apiFetch<ProfileInterestsResponse>(
+    `/profiles/${profileId}/interests`,
+    {
+      auth: true,
+    }
+  );
 }
 
 export async function updateProfile<
@@ -154,11 +175,10 @@ export async function updateProfile<
     city: string;
     interests: string[];
   },
->(
-  updated: T
-): Promise<T> {
+>(updated: T): Promise<T> {
   const profile = await apiFetch<BackendProfile>(`/profiles/${updated.id}`, {
     method: "PATCH",
+    auth: true,
     body: JSON.stringify({
       display_name: updated.username || updated.display_name,
       age: updated.age,
@@ -171,4 +191,27 @@ export async function updateProfile<
     ...updated,
     ...mapProfile(profile, updated.interests),
   };
+}
+
+export type ProfilePhotoResponse = {
+  message?: string;
+  id?: number;
+  profile_id?: number;
+  filename?: string;
+  content_type?: string;
+};
+
+export async function uploadProfilePhoto(
+  profileId: number | string,
+  file: File
+): Promise<ProfilePhotoResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiFetch<ProfilePhotoResponse>(`/profiles/${profileId}/photo`, {
+    method: "POST",
+    auth: true,
+    body: formData,
+    headers: {},
+  });
 }

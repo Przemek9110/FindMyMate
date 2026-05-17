@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { apiFetch } from "@/lib/api/api";
 import type { DiscoverUser } from "@/lib/api/discover";
+import { getProfileInterests } from "@/lib/api/profile";
 
 type BackendMatch = {
   match_id: number;
@@ -10,6 +11,7 @@ type BackendMatch = {
   age: number;
   bio: string | null;
   city: string | null;
+  interests?: string[];
 };
 
 type MatchesResponse = {
@@ -38,10 +40,32 @@ function mapMatch(match: BackendMatch): DiscoverUser {
     age: match.age,
     bio: match.bio ?? "",
     city: match.city ?? "",
-    interests: [],
+    interests: match.interests ?? [],
     incomingReaction: "like",
     matchId: match.match_id,
   };
+}
+
+async function mapMatchWithInterests(match: BackendMatch): Promise<DiscoverUser> {
+  if (match.interests && match.interests.length > 0) {
+    return mapMatch(match);
+  }
+
+  try {
+    const { interests } = await getProfileInterests(match.profile_id);
+
+    return mapMatch({
+      ...match,
+      interests: interests.map((interest) => interest.name),
+    });
+  } catch (error) {
+    console.error(
+      `Nie udało się pobrać zainteresowań profilu ${match.profile_id}:`,
+      error
+    );
+
+    return mapMatch(match);
+  }
 }
 
 export const useMatchesStore = create<MatchesState>()(
@@ -52,12 +76,36 @@ export const useMatchesStore = create<MatchesState>()(
       error: null,
 
       fetchMatches: async (profileId) => {
+        if (!profileId) {
+          set({
+            error: "Brak ID profilu do pobrania dopasowań.",
+            isLoading: false,
+          });
+          return;
+        }
+
+        if (get().isLoading) {
+          return;
+        }
+
         try {
           set({ isLoading: true, error: null });
-          const data = await apiFetch<MatchesResponse>(`/matches/${profileId}`);
+
+          const data = await apiFetch<MatchesResponse>(
+            `/matches/${profileId}`,
+            {
+              auth: true,
+            }
+          );
+
+          const matchesWithInterests = await Promise.all(
+            data.matches.map(mapMatchWithInterests)
+          );
+
           set({
-            matches: data.matches.map(mapMatch),
+            matches: matchesWithInterests,
             isLoading: false,
+            error: null,
           });
         } catch (error) {
           set({
@@ -72,7 +120,9 @@ export const useMatchesStore = create<MatchesState>()(
 
       addMatch: (user) =>
         set((state) => {
-          const alreadyExists = state.matches.some((match) => match.id === user.id);
+          const alreadyExists = state.matches.some(
+            (match) => match.id === user.id
+          );
 
           if (alreadyExists) {
             return state;
@@ -92,11 +142,18 @@ export const useMatchesStore = create<MatchesState>()(
         return get().matches.some((match) => match.id === userId);
       },
 
-      clearMatches: () => set({ matches: [], error: null, isLoading: false }),
+      clearMatches: () =>
+        set({
+          matches: [],
+          error: null,
+          isLoading: false,
+        }),
     }),
     {
       name: "matches-storage",
-      partialize: (state) => ({ matches: state.matches }),
+      partialize: (state) => ({
+        matches: state.matches,
+      }),
     }
   )
 );

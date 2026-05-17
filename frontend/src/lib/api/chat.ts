@@ -35,7 +35,10 @@ function mapMessage(message: BackendMessage): Message {
 export async function getChatMessages(
   matchId: number | string
 ): Promise<Message[]> {
-  const data = await apiFetch<MessagesResponse>(`/messages/${matchId}`);
+  const data = await apiFetch<MessagesResponse>(`/messages/${matchId}`, {
+    auth: true,
+  });
+
   return data.messages.map(mapMessage);
 }
 
@@ -46,6 +49,7 @@ export async function sendChatMessage(
 ): Promise<Message> {
   const data = await apiFetch<SendMessageResponse>("/messages", {
     method: "POST",
+    auth: true,
     body: JSON.stringify({
       match_id: Number(matchId),
       sender_profile_id: Number(senderProfileId),

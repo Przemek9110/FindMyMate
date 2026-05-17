@@ -51,15 +51,25 @@ function mapDiscoverUser(candidate: BackendDiscoverCandidate): DiscoverUser {
     age: candidate.age,
     bio: candidate.bio ?? "",
     city: candidate.city ?? "",
-    interests: candidate.interests,
+    interests: candidate.interests ?? [],
     incomingReaction: "none",
   };
 }
 
 export async function getDiscoverUsers(
-  currentProfileId: number | string = 1
+  currentProfileId: number | string
 ): Promise<DiscoverUser[]> {
-  const data = await apiFetch<DiscoverResponse>(`/discover/${currentProfileId}`);
+  if (!currentProfileId) {
+    throw new Error("Brak ID aktualnego profilu.");
+  }
+
+  const data = await apiFetch<DiscoverResponse>(
+    `/discover/${currentProfileId}`,
+    {
+      auth: true,
+    }
+  );
+
   return data.candidates.map(mapDiscoverUser);
 }
 
@@ -68,8 +78,13 @@ export async function sendReaction(
   targetProfileId: number | string,
   reaction: ReactionType
 ): Promise<ReactionResponse> {
+  if (!currentProfileId || !targetProfileId) {
+    throw new Error("Brak ID profilu dla reakcji.");
+  }
+
   return apiFetch<ReactionResponse>("/reactions", {
     method: "POST",
+    auth: true,
     body: JSON.stringify({
       from_profile_id: Number(currentProfileId),
       to_profile_id: Number(targetProfileId),
