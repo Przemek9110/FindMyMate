@@ -13,6 +13,7 @@ type RegisterPayload = {
 
 type BackendUser = {
   id: number;
+  username: string;
   email: string;
 };
 
@@ -68,6 +69,7 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
   const user = await apiFetch<CreateUserResponse>("/users", {
     method: "POST",
     body: JSON.stringify({
+      username: payload.username,
       email: payload.email,
       password: payload.password,
     }),
@@ -84,7 +86,7 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
   return {
     user: {
       id: String(user.id),
-      username: payload.username?.trim() || user.email.split("@")[0],
+      username: user.username,
       email: user.email,
     },
     token: token.access_token,
