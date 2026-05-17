@@ -68,27 +68,27 @@ export function MatchCard({
                 </p>
               ) : (
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Kliknij, zeby rozwinac profil
+                  Kliknij, żeby rozwinąć profil
                 </p>
               )}
             </div>
           </button>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={onPreviewProfile}
-              aria-label={`Pokaz profil ${username}`}
-            >
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={onPreviewProfile}
+                aria-label={`Pokaż profil ${username}`}
+              >
               <Eye className="size-4" />
             </Button>
             <Button
               type="button"
               size="icon"
               onClick={onOpenChat}
-              aria-label={`Otworz rozmowe z ${username}`}
+              aria-label={`Otwórz rozmowę z ${username}`}
             >
               <MessageCircle className="size-4" />
             </Button>
@@ -110,7 +110,7 @@ export function MatchCard({
               </div>
             ) : (
               <p className="mt-3 text-xs text-muted-foreground">
-                Brak zapisanych zainteresowan.
+                Brak zapisanych zainteresowań.
               </p>
             )}
           </div>

@@ -25,7 +25,7 @@ export function ProfileHeader({
           <div className="flex items-center gap-4">
             <Avatar className="size-20 border-4 border-background shadow-md">
               {photoUrl ? (
-                <AvatarImage src={photoUrl} alt={`Zdjecie profilu ${username}`} />
+                <AvatarImage src={photoUrl} alt={`Zdjęcie profilu ${username}`} />
               ) : null}
               <AvatarFallback className="bg-primary text-2xl text-primary-foreground">
                 {username.charAt(0).toUpperCase()}
@@ -38,7 +38,7 @@ export function ProfileHeader({
                 <UsersRound className="size-4 text-primary" />
               </div>
               <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">
-                {bio || "Dodaj kilka slow o sobie, zeby latwiej bylo Cie poznac."}
+                {bio || "Dodaj kilka słów o sobie, żeby łatwiej było Cię poznać."}
               </p>
             </div>
           </div>

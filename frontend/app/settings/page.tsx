@@ -66,8 +66,8 @@ const sections: {
   },
   {
     id: "account",
-    label: "Zmien dane",
-    description: "Login, mail i haslo",
+    label: "Zmień dane",
+    description: "Login, e-mail i hasło",
     icon: KeyRound,
   },
   {
@@ -137,7 +137,7 @@ export default function SettingsPage() {
         interests: [],
       });
     } catch {
-      setProfileError("Nie udalo sie pobrac profilu.");
+      setProfileError("Nie udało się pobrać profilu.");
     } finally {
       setIsLoadingProfile(false);
     }
@@ -220,7 +220,7 @@ export default function SettingsPage() {
       setProfileSuccess("Profil zapisany");
       setTimeout(() => setProfileSuccess(null), 3000);
     } catch {
-      setProfileError("Nie udalo sie zapisac profilu.");
+      setProfileError("Nie udało się zapisać profilu.");
     } finally {
       setIsSavingProfile(false);
     }
@@ -244,13 +244,13 @@ export default function SettingsPage() {
       const result = typeof reader.result === "string" ? reader.result : null;
 
       if (!result) {
-        setProfileError("Nie udalo sie wczytac zdjecia.");
+        setProfileError("Nie udało się wczytać zdjęcia.");
         return;
       }
 
       saveProfilePhoto(authUser.id, result);
       setProfilePhoto(result);
-      setProfileSuccess("Zdjecie profilu zapisane");
+      setProfileSuccess("Zdjęcie profilu zapisane");
       setTimeout(() => setProfileSuccess(null), 3000);
     };
 
@@ -264,7 +264,7 @@ export default function SettingsPage() {
 
     removeProfilePhoto(authUser.id);
     setProfilePhoto(null);
-    setProfileSuccess("Zdjecie profilu usuniete");
+    setProfileSuccess("Zdjęcie profilu usunięte");
     setTimeout(() => setProfileSuccess(null), 3000);
   };
 
@@ -287,16 +287,16 @@ export default function SettingsPage() {
           {isLoadingProfile ? (
             <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
               <CardContent className="p-6 text-sm text-muted-foreground">
-                Ladowanie profilu...
+                Ładowanie profilu...
               </CardContent>
             </Card>
           ) : profile ? (
             <>
               <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
                 <CardHeader>
-                  <CardTitle>Zdjecie profilu</CardTitle>
+                  <CardTitle>Zdjęcie profilu</CardTitle>
                   <CardDescription>
-                    Zdjecie jest tymczasowo zapisywane lokalnie w przegladarce.
+                    Zdjęcie jest tymczasowo zapisywane lokalnie w przeglądarce.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -304,7 +304,7 @@ export default function SettingsPage() {
                     {profilePhoto ? (
                       <AvatarImage
                         src={profilePhoto}
-                        alt={`Zdjecie profilu ${profile.username}`}
+                        alt={`Zdjęcie profilu ${profile.username}`}
                       />
                     ) : null}
                     <AvatarFallback className="bg-primary text-2xl text-primary-foreground">
@@ -316,7 +316,7 @@ export default function SettingsPage() {
                     <Button type="button" variant="outline" asChild>
                       <Label htmlFor="profile-photo" className="cursor-pointer">
                         <ImagePlus className="size-4" />
-                        Dodaj zdjecie
+                        Dodaj zdjęcie
                       </Label>
                     </Button>
                     <Input
@@ -333,7 +333,7 @@ export default function SettingsPage() {
                         onClick={handleRemovePhoto}
                       >
                         <Trash2 className="size-4" />
-                        Usun zdjecie
+                        Usuń zdjęcie
                       </Button>
                     ) : null}
                   </div>
@@ -350,7 +350,7 @@ export default function SettingsPage() {
           ) : (
             <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
               <CardContent className="p-6 text-sm text-muted-foreground">
-                Nie udalo sie przygotowac formularza profilu.
+                Nie udało się przygotować formularza profilu.
               </CardContent>
             </Card>
           )}
@@ -364,8 +364,8 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Dane konta</CardTitle>
             <CardDescription>
-              Backend nie ma jeszcze endpointow zmiany loginu, maila ani hasla,
-              wiec pola sa przygotowane wizualnie na kolejny etap.
+              Backend nie ma jeszcze endpointów zmiany loginu, e-maila ani hasła,
+              więc pola są przygotowane wizualnie na kolejny etap.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
@@ -388,7 +388,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="current-password">Aktualne haslo</Label>
+              <Label htmlFor="current-password">Aktualne hasło</Label>
               <Input
                 id="current-password"
                 type="password"
@@ -397,7 +397,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="new-password">Nowe haslo</Label>
+              <Label htmlFor="new-password">Nowe hasło</Label>
               <Input
                 id="new-password"
                 type="password"
@@ -419,8 +419,8 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Systemowe</CardTitle>
           <CardDescription>
-            Domyslnie aplikacja moze dopasowac sie do ustawien systemu, ale
-            mozesz wymusic jasny albo ciemny motyw.
+            Domyślnie aplikacja może dopasować się do ustawień systemu, ale
+            możesz wymusić jasny albo ciemny motyw.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-3">
@@ -447,7 +447,7 @@ export default function SettingsPage() {
         <PageHeader
           eyebrow="Ustawienia"
           title="Preferencje konta"
-          description="Zarzadzaj profilem, danymi konta i ustawieniami systemowymi."
+          description="Zarządzaj profilem, danymi konta i ustawieniami systemowymi."
         />
 
         <div className="grid gap-6 md:grid-cols-[260px_1fr]">

@@ -71,7 +71,7 @@ export function UserCard({
         {sharedInterests.length > 0 && (
           <div className="rounded-xl border bg-accent/35 p-3">
             <p className="mb-2 text-xs font-medium text-muted-foreground">
-              Wspolne zainteresowania
+              Wspólne zainteresowania
             </p>
             <div className="flex flex-wrap gap-2">
               {sharedInterests.map((interest) => (

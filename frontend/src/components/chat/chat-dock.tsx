@@ -81,7 +81,7 @@ export function ChatDock() {
         const data = await getChatMessages(selectedMatch.matchId ?? selectedMatch.id);
         setMessages(data);
       } catch (error) {
-        console.error("Blad podczas pobierania wiadomosci:", error);
+        console.error("Błąd podczas pobierania wiadomości:", error);
         setMessages([]);
       } finally {
         setIsLoading(false);
@@ -110,7 +110,7 @@ export function ChatDock() {
       setMessages((prev) => [...prev, newMessage]);
       setInput("");
     } catch (error) {
-      console.error("Blad podczas wysylania wiadomosci:", error);
+      console.error("Błąd podczas wysyłania wiadomości:", error);
     } finally {
       setIsSending(false);
     }
@@ -135,7 +135,7 @@ export function ChatDock() {
               <p className="text-xs text-muted-foreground">
                 {selectedMatch
                   ? `Rozmowa z ${selectedMatch.username}`
-                : "Wybierz rozmowe"}
+                  : "Wybierz rozmowę"}
               </p>
             </div>
 
@@ -144,7 +144,7 @@ export function ChatDock() {
               size="icon-sm"
               onClick={closeChat}
               className="absolute right-3 top-3"
-              aria-label="Zamknij okno chatu"
+              aria-label="Zamknij okno czatu"
             >
               <X className="size-4" />
             </Button>
@@ -154,7 +154,7 @@ export function ChatDock() {
             <CardContent className="max-h-[420px] space-y-2 overflow-y-auto p-3">
               {matches.length === 0 ? (
                 <div className="rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
-                  Nie masz jeszcze zadnych rozmow.
+                  Nie masz jeszcze żadnych rozmów.
                 </div>
               ) : (
                 matches.map((match) => (
@@ -171,7 +171,7 @@ export function ChatDock() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{match.username}</p>
                       <p className="truncate text-sm text-muted-foreground">
-                        {match.interests.join(", ") || "Rozpocznij rozmowe"}
+                        {match.interests.join(", ") || "Rozpocznij rozmowę"}
                       </p>
                     </div>
                   </button>
@@ -185,22 +185,22 @@ export function ChatDock() {
                   onClick={() => selectConversation(null)}
                   className="text-sm text-muted-foreground hover:text-foreground"
                 >
-                  Wroc do listy rozmow
+                  Wróć do listy rozmów
                 </button>
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
                 {isLoading ? (
                   <p className="text-sm text-muted-foreground">
-                    Ladowanie wiadomosci...
+                    Ładowanie wiadomości...
                   </p>
                 ) : !currentProfileId ? (
                   <p className="text-sm text-red-500">
-                    Najpierw utworz profil, zeby wysylac wiadomosci.
+                    Najpierw utwórz profil, żeby wysyłać wiadomości.
                   </p>
                 ) : messages.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Brak wiadomosci. Rozpocznij rozmowe.
+                    Brak wiadomości. Rozpocznij rozmowę.
                   </p>
                 ) : (
                   messages.map((message) => {
@@ -226,7 +226,7 @@ export function ChatDock() {
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Napisz wiadomosc..."
+                  placeholder="Napisz wiadomość..."
                   disabled={isSending}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {

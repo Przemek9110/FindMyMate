@@ -23,7 +23,7 @@ export function InterestTags({ interests }: InterestTagsProps) {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Dodaj zainteresowania, zeby Discover mogl lepiej pokazac wspolne tematy.
+            Dodaj zainteresowania, żeby Discover mógł lepiej pokazać wspólne tematy.
           </p>
         )}
       </CardContent>

@@ -54,7 +54,7 @@ export default function RegisterPage() {
       !formData.email.trim() ||
       !formData.password.trim()
     ) {
-      setError("Uzupelnij nazwe uzytkownika, email i haslo.");
+      setError("Uzupełnij nazwę użytkownika, e-mail i hasło.");
       return;
     }
 
@@ -70,8 +70,8 @@ export default function RegisterPage() {
 
       router.push("/profile");
     } catch (err) {
-      console.error("Blad rejestracji:", err);
-      setError("Nie udalo sie utworzyc konta. Sprobuj ponownie.");
+      console.error("Błąd rejestracji:", err);
+      setError("Nie udało się utworzyć konta. Spróbuj ponownie.");
     } finally {
       setIsLoading(false);
     }
@@ -82,22 +82,22 @@ export default function RegisterPage() {
       <div className="mx-auto grid min-h-[calc(100vh-160px)] max-w-md content-center gap-6 px-4 py-8">
         <PageHeader
           eyebrow="Rejestracja"
-          title="Dolacz do FindMyMate"
-          description="Stworz konto, uzupelnij profil i poznawaj osoby z podobnymi zainteresowaniami."
+          title="Dołącz do FindMyMate"
+          description="Stwórz konto, uzupełnij profil i poznawaj osoby z podobnymi zainteresowaniami."
         />
 
         <Card className="w-full border-0 bg-card/95 shadow-xl ring-1 ring-border/70">
           <CardHeader className="space-y-2">
             <CardTitle>Dane konta</CardTitle>
             <CardDescription>
-              Te dane posluza do utworzenia konta w aplikacji.
+              Te dane posłużą do utworzenia konta w aplikacji.
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="username">Nazwa uzytkownika</Label>
+                <Label htmlFor="username">Nazwa użytkownika</Label>
                 <Input
                   id="username"
                   type="text"
@@ -127,7 +127,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Haslo</Label>
+                <Label htmlFor="password">Hasło</Label>
                 <Input
                   id="password"
                   type="password"
@@ -156,7 +156,7 @@ export default function RegisterPage() {
                 ) : (
                   <>
                     <UserPlus className="size-4" />
-                    Zaloz konto
+                    Załóż konto
                   </>
                 )}
               </Button>
@@ -165,13 +165,13 @@ export default function RegisterPage() {
             <Separator className="my-5" />
 
             <p className="text-center text-sm text-muted-foreground">
-              Masz juz konto?{" "}
+              Masz już konto?{" "}
               <Link
                 href="/login"
                 className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
               >
                 <Mail className="size-3.5" />
-                Zaloguj sie
+                Zaloguj się
               </Link>
             </p>
           </CardContent>

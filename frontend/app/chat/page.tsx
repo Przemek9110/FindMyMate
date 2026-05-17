@@ -82,9 +82,9 @@ function ChatPageContent() {
       const data = await getChatMessages(selectedMatch.matchId ?? selectedMatch.id);
       setMessages(data);
     } catch (error) {
-      console.error("Blad podczas pobierania wiadomosci:", error);
+      console.error("Błąd podczas pobierania wiadomości:", error);
       setMessages([]);
-      setLoadError("Nie udalo sie pobrac wiadomosci");
+      setLoadError("Nie udało się pobrać wiadomości.");
     } finally {
       setIsLoading(false);
     }
@@ -112,8 +112,8 @@ function ChatPageContent() {
       setMessages((prev) => [...prev, newMessage]);
       setInput("");
     } catch (error) {
-      console.error("Blad podczas wysylania wiadomosci:", error);
-      setSendError("Nie udalo sie wyslac wiadomosci");
+      console.error("Błąd podczas wysyłania wiadomości:", error);
+      setSendError("Nie udało się wysłać wiadomości.");
     } finally {
       setIsSending(false);
     }
@@ -128,8 +128,8 @@ function ChatPageContent() {
       <div className="mx-auto max-w-4xl space-y-6">
         <PageHeader
           eyebrow="Rozmowy"
-          title="Centrum rozmow"
-          description="Pisz do osob, z ktorymi masz dopasowanie."
+          title="Centrum rozmów"
+          description="Pisz do osób, z którymi masz dopasowanie."
         />
 
         {!userId ? (
@@ -141,13 +141,13 @@ function ChatPageContent() {
                     <MessageCircle className="size-6" />
                   </div>
                   <div>
-                    <h2 className="font-semibold">Brak rozmow</h2>
+                    <h2 className="font-semibold">Brak rozmów</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Najpierw zdobadz match w Discover.
+                      Najpierw zdobądź match w Discover.
                     </p>
                   </div>
                   <Button onClick={() => router.push("/discover")}>
-                    Przejdz do Discover
+                    Przejdź do Discover
                   </Button>
                 </CardContent>
               </Card>
@@ -168,7 +168,7 @@ function ChatPageContent() {
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold">{match.username}</p>
                         <p className="truncate text-sm text-muted-foreground">
-                          {match.interests.join(", ") || "Rozpocznij rozmowe"}
+                          {match.interests.join(", ") || "Rozpocznij rozmowę"}
                         </p>
                       </div>
                     </CardContent>
@@ -180,7 +180,7 @@ function ChatPageContent() {
         ) : !selectedMatch ? (
           <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
             <CardContent className="p-6 text-sm text-muted-foreground">
-              Nie znaleziono rozmowy dla wybranego uzytkownika.
+              Nie znaleziono rozmowy dla wybranego użytkownika.
             </CardContent>
           </Card>
         ) : (
@@ -206,14 +206,14 @@ function ChatPageContent() {
                 </div>
                 <Button variant="outline" size="sm" onClick={() => router.push("/chat")}>
                   <ArrowLeft className="size-4" />
-                  Wroc
+                  Wróć
                 </Button>
               </div>
             </CardHeader>
 
             {!currentProfileId ? (
               <div className="border-b bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-200">
-                Najpierw utworz profil, zeby wysylac wiadomosci.
+                Najpierw utwórz profil, żeby wysyłać wiadomości.
               </div>
             ) : null}
 
@@ -229,13 +229,13 @@ function ChatPageContent() {
                   <div className="space-y-3">
                     <p className="text-sm text-red-500">{loadError}</p>
                     <Button variant="outline" onClick={loadMessages}>
-                      Sprobuj ponownie
+                      Spróbuj ponownie
                     </Button>
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="grid h-full place-items-center text-center">
                     <p className="text-sm text-muted-foreground">
-                      Brak wiadomosci. Rozpocznij rozmowe.
+                      Brak wiadomości. Rozpocznij rozmowę.
                     </p>
                   </div>
                 ) : (
@@ -267,7 +267,7 @@ function ChatPageContent() {
                   <Input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Napisz wiadomosc..."
+                    placeholder="Napisz wiadomość..."
                     disabled={isSending}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -278,7 +278,7 @@ function ChatPageContent() {
                   />
                   <Button onClick={handleSend} disabled={isSendDisabled} size="lg">
                     <Send className="size-4" />
-                    {isSending ? "..." : "Wyslij"}
+                    {isSending ? "..." : "Wyślij"}
                   </Button>
                 </div>
               </div>

@@ -89,7 +89,7 @@ export default function DiscoverPage() {
         setUsers([]);
         setProfile(null);
         setCurrentProfileId(null);
-        setError("Najpierw utworz profil, zeby korzystac z Discover.");
+        setError("Najpierw utwórz profil, żeby korzystać z Discover.");
         return;
       }
 
@@ -99,8 +99,8 @@ export default function DiscoverPage() {
       setProfile(profileData);
       setCurrentProfileId(Number(storedProfileId));
     } catch (error) {
-      console.error("Blad podczas pobierania danych Discover:", error);
-      setError("Nie udalo sie pobrac uzytkownikow");
+      console.error("Błąd podczas pobierania danych Discover:", error);
+      setError("Nie udało się pobrać użytkowników.");
     } finally {
       setIsLoading(false);
     }
@@ -175,13 +175,13 @@ export default function DiscoverPage() {
         return;
       }
 
-      console.error("Blad podczas wysylania reakcji:", error);
+      console.error("Błąd podczas wysyłania reakcji:", error);
       showTemporaryModal({
         type: reactionType,
         message:
           reactionType === "like"
-            ? "Nie udalo sie zapisac polubienia. Sprobuj ponownie."
-            : "Nie udalo sie zapisac pominiecia. Sprobuj ponownie.",
+            ? "Nie udało się zapisać polubienia. Spróbuj ponownie."
+            : "Nie udało się zapisać pominięcia. Spróbuj ponownie.",
       });
     } finally {
       setIsReacting(false);
@@ -202,8 +202,8 @@ export default function DiscoverPage() {
         <div className="flex flex-col gap-6">
           <PageHeader
             eyebrow="Odkrywaj"
-            title="Poznaj kogos nowego"
-            description="Podejmuj decyzje przyciskami Poznajmy się i Pomiń. Reszte ogarnia flow."
+            title="Poznaj kogoś nowego"
+            description="Podejmuj decyzje przyciskami Poznajmy się i Pomiń. Resztę ogarnia flow."
           />
 
           {isLoading ? (
@@ -224,14 +224,14 @@ export default function DiscoverPage() {
             <Card className="border-red-200 bg-red-50/80 text-red-700 shadow-sm dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
               <CardContent className="flex flex-col gap-4 p-6">
                 <p className="text-sm">{error}</p>
-              <Button
-                type="button"
-                onClick={loadData}
-                variant="outline"
-                className="w-fit"
-              >
-                Sprobuj ponownie
-              </Button>
+                <Button
+                  type="button"
+                  onClick={loadData}
+                  variant="outline"
+                  className="w-fit"
+                >
+                  Spróbuj ponownie
+                </Button>
               </CardContent>
             </Card>
           ) : currentUser ? (
@@ -248,11 +248,11 @@ export default function DiscoverPage() {
                 <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <UsersRound className="size-6" />
                 </div>
-                <h2 className="font-semibold">To juz wszystkie profile</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Sprobuj pozniej ponownie albo poszerz swoje zainteresowania, aby
-                zobaczyc wiecej dopasowan.
-              </p>
+                <h2 className="font-semibold">To już wszystkie profile</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Spróbuj później ponownie albo poszerz swoje zainteresowania, aby
+                  zobaczyć więcej dopasowań.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -269,7 +269,7 @@ export default function DiscoverPage() {
                 </div>
                 <h2 className="text-2xl font-bold">To match!</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Ty i {feedbackModal.username} polubiliscie sie wzajemnie.
+                  Ty i {feedbackModal.username} polubiliście się wzajemnie.
                 </p>
                 <div className="mt-6 flex gap-3">
                   <Button
@@ -277,7 +277,7 @@ export default function DiscoverPage() {
                     onClick={() => router.push("/matches")}
                     className="flex-1"
                   >
-                    Zobacz matche
+                    Zobacz dopasowania
                   </Button>
                   <Button
                     type="button"

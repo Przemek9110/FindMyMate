@@ -48,7 +48,7 @@ export default function ProfilePage() {
       localStorage.removeItem(CURRENT_PROFILE_ID_KEY);
       setProfile(null);
     } catch {
-      setError("Nie udalo sie pobrac profilu.");
+      setError("Nie udało się pobrać profilu.");
     } finally {
       setIsLoading(false);
     }
@@ -63,9 +63,9 @@ export default function ProfilePage() {
       <main className="mx-auto min-h-screen max-w-3xl px-0 py-4 sm:py-8">
         <div className="mb-6">
           <PageHeader
-            eyebrow="Twoj profil"
-            title="Podglad profilu"
-            description="Edycje profilu znajdziesz teraz w ustawieniach."
+            eyebrow="Twój profil"
+            title="Podgląd profilu"
+            description="Edycję profilu znajdziesz teraz w ustawieniach."
           />
         </div>
 
@@ -91,7 +91,7 @@ export default function ProfilePage() {
                 variant="outline"
                 className="w-fit"
               >
-                Sprobuj ponownie
+                Spróbuj ponownie
               </Button>
             </CardContent>
           </Card>
@@ -111,10 +111,10 @@ export default function ProfilePage() {
           <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
             <CardContent className="flex flex-col gap-4 p-6">
               <p className="text-sm text-muted-foreground">
-                Nie masz jeszcze profilu. Utworz go w ustawieniach.
+                Nie masz jeszcze profilu. Utwórz go w ustawieniach.
               </p>
               <Button onClick={() => router.push("/settings")} className="w-fit">
-                Przejdz do ustawien
+                Przejdź do ustawień
               </Button>
             </CardContent>
           </Card>

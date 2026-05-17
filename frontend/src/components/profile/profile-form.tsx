@@ -41,9 +41,9 @@ export function ProfileForm({
       .filter(Boolean);
 
     if (!trimmedBio) {
-      newErrors.bio = "Opis nie moze byc pusty.";
+      newErrors.bio = "Opis nie może być pusty.";
     } else if (trimmedBio.length < 10) {
-      newErrors.bio = "Opis musi miec co najmniej 10 znakow.";
+      newErrors.bio = "Opis musi mieć co najmniej 10 znaków.";
     }
 
     if (parsedInterests.length === 0) {
@@ -79,7 +79,7 @@ export function ProfileForm({
   return (
     <Card className="border-0 bg-card/95 shadow-lg ring-1 ring-border/70">
       <CardHeader>
-        <CardTitle>Ustaw swoj profil</CardTitle>
+        <CardTitle>Ustaw swój profil</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
@@ -99,7 +99,7 @@ export function ProfileForm({
               aria-invalid={Boolean(errors.bio)}
               aria-describedby={errors.bio ? "bio-error" : undefined}
               className={errors.bio ? "border-red-500" : undefined}
-              placeholder="Napisz cos o sobie..."
+              placeholder="Napisz coś o sobie..."
             />
             {errors.bio && (
               <p id="bio-error" className="text-sm text-red-500">
@@ -124,7 +124,7 @@ export function ProfileForm({
               aria-invalid={Boolean(errors.interests)}
               aria-describedby={errors.interests ? "interests-error" : undefined}
               className={errors.interests ? "border-red-500" : undefined}
-              placeholder="Np. React, muzyka, podroze"
+              placeholder="Np. React, muzyka, podróże"
             />
             <p className="text-xs text-muted-foreground">
               Oddziel zainteresowania przecinkami.

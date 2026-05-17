@@ -60,7 +60,7 @@ export default function MatchesPage() {
         <PageHeader
           eyebrow="Dopasowania"
           title={`Twoje dopasowania (${matches.length})`}
-          description="Kliknij karte, zeby rozwinac profil, albo uzyj akcji po prawej."
+          description="Kliknij kartę, żeby rozwinąć profil, albo użyj akcji po prawej."
           action={
             <Button onClick={() => router.push("/discover")} variant="outline">
               <Search className="size-4" />
@@ -83,7 +83,7 @@ export default function MatchesPage() {
 
               {missingProfile ? (
                 <p className="text-sm text-red-500">
-                  Najpierw utworz profil, zeby zobaczyc dopasowania.
+                  Najpierw utwórz profil, żeby zobaczyć dopasowania.
                 </p>
               ) : null}
 
@@ -91,10 +91,10 @@ export default function MatchesPage() {
 
               <div>
                 <h2 className="text-lg font-semibold">
-                  Jeszcze bez dopasowan
+                  Jeszcze bez dopasowań
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Ocen kilka osob w Odkrywaj, a wzajemne dopasowania pojawia sie
+                  Oceń kilka osób w Odkrywaj, a wzajemne dopasowania pojawią się
                   tutaj.
                 </p>
               </div>
@@ -103,7 +103,7 @@ export default function MatchesPage() {
                 onClick={() => router.push(missingProfile ? "/profile" : "/discover")}
                 className="w-full sm:w-auto"
               >
-                {missingProfile ? "Przejdz do profilu" : "Przejdz do Odkrywaj"}
+                {missingProfile ? "Przejdź do profilu" : "Przejdź do Odkrywaj"}
               </Button>
             </CardContent>
           </Card>
@@ -138,7 +138,7 @@ export default function MatchesPage() {
             <CardHeader className="flex-row items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-medium text-primary">
-                  Pelny podglad profilu
+                  Pełny podgląd profilu
                 </p>
                 <CardTitle className="mt-1 text-2xl">
                   {previewProfile.username}
@@ -152,7 +152,7 @@ export default function MatchesPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setPreviewProfile(null)}
-                aria-label="Zamknij podglad profilu"
+                aria-label="Zamknij podgląd profilu"
               >
                 <X className="size-4" />
               </Button>
@@ -171,7 +171,7 @@ export default function MatchesPage() {
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    Brak zapisanych zainteresowan.
+                    Brak zapisanych zainteresowań.
                   </p>
                 )}
               </div>
@@ -181,7 +181,7 @@ export default function MatchesPage() {
                 onClick={() => openChat(previewProfile.id)}
                 className="w-full"
               >
-                Przejdz do rozmowy
+                Przejdź do rozmowy
                 <ArrowRight className="size-4" />
               </Button>
             </CardContent>

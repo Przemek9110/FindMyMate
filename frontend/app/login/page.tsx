@@ -44,7 +44,7 @@ export default function LoginPage() {
     setError("");
 
     if (!formData.email.trim() || !formData.password.trim()) {
-      setError("Uzupelnij email i haslo.");
+      setError("Uzupełnij e-mail i hasło.");
       return;
     }
 
@@ -60,8 +60,8 @@ export default function LoginPage() {
 
       router.push("/discover");
     } catch (err) {
-      console.error("Blad logowania:", err);
-      setError("Nie udalo sie zalogowac. Sprawdz dane i sprobuj ponownie.");
+      console.error("Błąd logowania:", err);
+      setError("Nie udało się zalogować. Sprawdź dane i spróbuj ponownie.");
     } finally {
       setIsLoading(false);
     }
@@ -72,14 +72,14 @@ export default function LoginPage() {
       <div className="mx-auto flex min-h-[calc(100vh-140px)] max-w-md flex-col justify-center gap-6 px-4 py-10">
         <PageHeader
           eyebrow="Logowanie"
-          title="Wroc do FindMyMate"
-          description="Zaloguj sie, aby przejsc do aplikacji."
+          title="Wróć do FindMyMate"
+          description="Zaloguj się, aby przejść do aplikacji."
         />
 
         <Card className="w-full border-0 bg-card/95 shadow-xl ring-1 ring-border/70">
           <CardHeader className="space-y-2">
             <CardTitle>Dane logowania</CardTitle>
-            <CardDescription>Wpisz email i haslo.</CardDescription>
+            <CardDescription>Wpisz e-mail i hasło.</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -100,7 +100,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Haslo</Label>
+                <Label htmlFor="password">Hasło</Label>
                 <Input
                   id="password"
                   type="password"
@@ -121,7 +121,7 @@ export default function LoginPage() {
               )}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logowanie..." : "Zaloguj sie"}
+                {isLoading ? "Logowanie..." : "Zaloguj się"}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">
@@ -130,7 +130,7 @@ export default function LoginPage() {
                   href="/register"
                   className="font-medium text-primary hover:underline"
                 >
-                  Zarejestruj sie
+                  Zarejestruj się
                 </Link>
               </p>
             </form>
