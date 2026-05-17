@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import inspect, text
 
 from app.api.router import api_router
 from app.db.base import Base
@@ -24,10 +25,33 @@ UPLOADS_DIR = Path(__file__).resolve().parents[1] / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def ensure_users_username_column():
+    inspector = inspect(engine)
+
+    if not inspector.has_table("users"):
+        return
+
+    user_columns = {column["name"] for column in inspector.get_columns("users")}
+
+    if "username" in user_columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(255)"))
+        connection.execute(
+            text("UPDATE users SET username = CONCAT('user_', id) WHERE username IS NULL")
+        )
+        connection.execute(text("ALTER TABLE users ALTER COLUMN username SET NOT NULL"))
+        connection.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username)")
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    ensure_users_username_column()
 
     db = SessionLocal()
     try:

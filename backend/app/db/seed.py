@@ -155,10 +155,11 @@ def seed_demo_data(db: Session):
             db.refresh(interest)
         return interest
 
-    def get_or_create_user(email: str, password: str) -> User:
+    def get_or_create_user(email: str, password: str, username: str) -> User:
         user = db.query(User).filter(User.email == email).first()
         if not user:
             user = User(
+                username=username,
                 email=email,
                 password_hash=hash_password(password)
             )
@@ -275,7 +276,11 @@ def seed_demo_data(db: Session):
     profile_by_name = {}
 
     for item in demo_users_data:
-        user = get_or_create_user(item["email"], item["password"])
+        user = get_or_create_user(
+            item["email"],
+            item["password"],
+            item["email"].split("@", 1)[0],
+        )
         profile = get_or_create_profile(
             user_id=user.id,
             display_name=item["display_name"],
@@ -330,7 +335,7 @@ def seed_demo_data(db: Session):
         email = f"seed{i:03d}@example.com"
         password = "test123456"
 
-        user = get_or_create_user(email, password)
+        user = get_or_create_user(email, password, f"seed{i:03d}")
 
         first_name = first_names[(i - 1) % len(first_names)]
         display_name = f"{first_name}_{i:03d}"

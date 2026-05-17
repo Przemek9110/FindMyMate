@@ -14,6 +14,7 @@ def create_test_user(db: Session = Depends(get_db)):
     users_count = db.query(User).count()
 
     user = User(
+        username=f"test{users_count + 1}",
         email=f"test{users_count + 1}@example.com",
         password_hash=hash_password("test123456")
     )
@@ -36,7 +37,13 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already exists")
 
+    existing_username = db.query(User).filter(User.username == user_data.username).first()
+
+    if existing_username:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
     user = User(
+        username=user_data.username,
         email=user_data.email,
         password_hash=hash_password(user_data.password)
     )
@@ -48,6 +55,7 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     return {
         "message": "user created",
         "id": user.id,
+        "username": user.username,
         "email": user.email
     }
 
@@ -59,6 +67,7 @@ def get_users(db: Session = Depends(get_db)):
     return [
         {
             "id": user.id,
+            "username": user.username,
             "email": user.email
         }
         for user in users
