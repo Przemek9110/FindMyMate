@@ -20,6 +20,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FindMyMate",
   description: "Frontend aplikacji FindMyMate",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

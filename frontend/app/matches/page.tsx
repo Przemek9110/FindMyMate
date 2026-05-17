@@ -110,7 +110,7 @@ export default function MatchesPage() {
           <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <PageHeader
               eyebrow="Dopasowania"
-              title={`Twoje dopasowania (${matches.length})`}
+              title={`Twoje dopasowania`}
               description="Tutaj trafiają osoby, z którymi macie wzajemne polubienie. Otwórz profil albo przejdź od razu do rozmowy."
             />
 
