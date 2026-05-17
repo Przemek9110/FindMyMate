@@ -12,6 +12,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   MessageCircle,
   Send,
   Sparkles,
@@ -22,7 +24,12 @@ import { useMatchesStore } from "@/store/matchesStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -66,6 +73,7 @@ function ChatPageContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [currentProfileId, setCurrentProfileId] = useState<number | null>(null);
+  const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(true);
 
   const isSendDisabled = input.trim() === "" || isSending || !currentProfileId;
 
@@ -219,37 +227,101 @@ function ChatPageContent() {
         </div>
 
         {!userId ? (
-          <div className="grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
-            <Card className="border-0 bg-card/95 shadow-md ring-1 ring-border/70">
-              <CardHeader className="p-6">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <MessageCircle className="size-6" />
-                </div>
+          <div
+            className={
+              isInfoPanelOpen
+                ? "grid gap-5 lg:grid-cols-[0.72fr_1fr]"
+                : "grid gap-5 lg:grid-cols-[88px_1fr]"
+            }
+          >
+            {isInfoPanelOpen ? (
+              <Card className="border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+                <CardContent className="space-y-5 p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <MessageCircle className="size-6" />
+                    </div>
 
-                <div className="mt-4">
-                  <h2 className="text-2xl font-extrabold tracking-[-0.03em]">
-                    Twoje rozmowy
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-foreground/68">
-                    Lista rozmów pojawi się po utworzeniu wzajemnego
-                    dopasowania.
-                  </p>
-                </div>
-              </CardHeader>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsInfoPanelOpen(false)}
+                      aria-label="Zwiń panel boczny"
+                      className="rounded-full text-foreground/55 hover:bg-muted hover:text-foreground"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </Button>
+                  </div>
 
-              <CardContent className="p-6 pt-0">
-                <Button
-                  type="button"
-                  onClick={() => router.push("/discover")}
-                  className="h-11 w-full rounded-full"
-                >
-                  Odkrywaj osoby
-                  <ArrowRight className="size-4" />
-                </Button>
-              </CardContent>
-            </Card>
+                  <div>
+                    <h2 className="text-2xl font-extrabold tracking-[-0.03em]">
+                      Twoje rozmowy
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-foreground/68">
+                      Lista rozmów bazuje na Twoich dopasowaniach. Wybierz osobę
+                      z listy i napisz pierwszą wiadomość.
+                    </p>
+                  </div>
 
-            <div className="space-y-3">
+                  <div className="grid gap-3">
+                    <div className="rounded-2xl border bg-primary/5 p-4">
+                      <p className="text-sm font-bold">Dostępne rozmowy</p>
+                      <p className="mt-1 text-3xl font-black tracking-tight text-primary">
+                        {matches.length}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border bg-background/70 p-4">
+                      <p className="text-sm font-bold">Jak zacząć?</p>
+                      <p className="mt-2 text-sm leading-6 text-foreground/65">
+                        Wybierz osobę, sprawdź wspólne tematy i zacznij rozmowę!
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    onClick={() => router.push("/discover")}
+                    className="h-11 w-full rounded-full"
+                  >
+                    Odkrywaj osoby
+                    <ArrowRight className="size-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+                <CardContent className="flex h-full min-h-24 flex-col items-center justify-between gap-4 p-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsInfoPanelOpen(true)}
+                    aria-label="Rozwiń panel boczny"
+                    className="rounded-full text-primary hover:bg-primary/10 hover:text-primary"
+                  >
+                    <ChevronRight className="size-5" />
+                  </Button>
+
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <MessageCircle className="size-5" />
+                    </div>
+
+                    <p className="text-center text-xs font-black uppercase tracking-[0.16em] text-primary [writing-mode:vertical-rl]">
+                      rozmowy
+                    </p>
+                  </div>
+
+                  <Badge variant="secondary" className="rounded-full px-2">
+                    {matches.length}
+                  </Badge>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="min-w-0">
               {matches.length === 0 ? (
                 <Card className="border-0 bg-card/95 shadow-md ring-1 ring-border/70">
                   <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
@@ -278,49 +350,80 @@ function ChatPageContent() {
                   </CardContent>
                 </Card>
               ) : (
-                matches.map((match) => (
-                  <button
-                    key={match.id}
-                    onClick={() => router.push(`/chat?userId=${match.id}`)}
-                    className="group w-full rounded-[1.5rem] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70 transition group-hover:-translate-y-0.5 group-hover:shadow-md group-hover:ring-primary/25">
-                      <CardContent className="flex items-center gap-4 p-4">
-                        <Avatar className="size-14 border-4 border-background shadow-sm">
-                          {match.photoUrl ? (
-                            <AvatarImage
-                              src={match.photoUrl}
-                              alt={`Zdjęcie profilu ${match.username}`}
-                            />
-                          ) : null}
-                          <AvatarFallback className="bg-primary/10 text-lg font-black text-primary">
-                            {match.username.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                <Card className="overflow-hidden border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+                  <CardHeader className="border-b bg-muted/25 p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <CardTitle className="text-xl font-black tracking-[-0.03em]">
+                          Lista rozmów
+                        </CardTitle>
+                        <p className="mt-1 text-sm text-foreground/60">
+                          Przewijaj listę bez rozciągania całej strony.
+                        </p>
+                      </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate text-base font-extrabold tracking-[-0.015em]">
-                              {match.username}
-                            </p>
-                            <Badge variant="accent" className="rounded-full">
-                              match
-                            </Badge>
-                          </div>
+                      <Badge
+                        variant="accent"
+                        className="w-fit rounded-full px-3 py-1"
+                      >
+                        {matches.length}{" "}
+                        {matches.length === 1 ? "rozmowa" : "rozmów"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
 
-                          <p className="mt-1 truncate text-sm text-foreground/65">
-                            {match.interests.join(", ") ||
-                              "Rozpocznij rozmowę"}
-                          </p>
-                        </div>
+                  <CardContent className="p-0">
+                    <div className="max-h-[620px] space-y-3 overflow-y-auto p-4 pr-3 lg:max-h-[calc(100vh-18rem)]">
+                      {matches.map((match) => (
+                        <button
+                          key={match.id}
+                          type="button"
+                          onClick={() => router.push(`/chat?userId=${match.id}`)}
+                          className="group w-full rounded-[1.5rem] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                          <Card className="border-0 bg-background/70 shadow-sm ring-1 ring-border/70 transition group-hover:-translate-y-0.5 group-hover:shadow-md group-hover:ring-primary/25">
+                            <CardContent className="flex items-center gap-4 p-4">
+                              <Avatar className="size-14 border-4 border-background shadow-sm">
+                                {match.photoUrl ? (
+                                  <AvatarImage
+                                    src={match.photoUrl}
+                                    alt={`Zdjęcie profilu ${match.username}`}
+                                  />
+                                ) : null}
+                                <AvatarFallback className="bg-primary/10 text-lg font-black text-primary">
+                                  {match.username.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
 
-                        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-foreground/60 transition group-hover:bg-primary group-hover:text-primary-foreground">
-                          <ArrowRight className="size-4" />
-                        </span>
-                      </CardContent>
-                    </Card>
-                  </button>
-                ))
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="truncate text-base font-extrabold tracking-[-0.015em]">
+                                    {match.username}
+                                  </p>
+                                  <Badge
+                                    variant="accent"
+                                    className="rounded-full"
+                                  >
+                                    match
+                                  </Badge>
+                                </div>
+
+                                <p className="mt-1 truncate text-sm text-foreground/65">
+                                  {match.interests.join(", ") ||
+                                    "Rozpocznij rozmowę"}
+                                </p>
+                              </div>
+
+                              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-foreground/60 transition group-hover:bg-primary group-hover:text-primary-foreground">
+                                <ArrowRight className="size-4" />
+                              </span>
+                            </CardContent>
+                          </Card>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           </div>
@@ -455,7 +558,9 @@ function ChatPageContent() {
                     return (
                       <div
                         key={message.id}
-                        className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                        className={`flex ${
+                          isMine ? "justify-end" : "justify-start"
+                        }`}
                       >
                         <div
                           className={`max-w-[82%] rounded-[1.4rem] px-4 py-2.5 text-sm leading-6 shadow-sm ${
