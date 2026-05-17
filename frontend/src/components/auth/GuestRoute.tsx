@@ -10,13 +10,25 @@ type GuestRouteProps = {
 
 export function GuestRoute({ children }: GuestRouteProps) {
   const router = useRouter();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+
+  const isAuthenticated = Boolean(token);
 
   useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
     if (isAuthenticated) {
       router.replace("/discover");
     }
-  }, [isAuthenticated, router]);
+  }, [hasHydrated, isAuthenticated, router]);
+
+  if (!hasHydrated) {
+    return null;
+  }
 
   if (isAuthenticated) {
     return null;

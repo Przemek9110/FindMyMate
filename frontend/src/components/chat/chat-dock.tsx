@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MessageCircle, Send, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  MessageCircle,
+  Send,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,22 +23,34 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { getProfileByUserId } from "@/lib/api/profile";
 
-const CURRENT_PROFILE_ID_KEY = "currentProfileId";
+const getCurrentProfileIdKey = (userId: string | number) =>
+  `currentProfileId:${userId}`;
 
 export function ChatDock() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const authUser = useAuthStore((s) => s.user);
-  const { matches } = useMatchesStore();
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const authUserId = useAuthStore((state) => state.user?.id);
 
-  const {
-    isOpen,
-    selectedUserId,
-    toggleChat,
-    closeChat,
-    selectConversation,
-  } = useChatUiStore();
+  const matches = useMatchesStore((state) => state.matches);
 
-  const selectedMatch = matches.find((match) => match.id === selectedUserId);
+  const isOpen = useChatUiStore((state) => state.isOpen);
+  const selectedUserId = useChatUiStore((state) => state.selectedUserId);
+  const toggleChat = useChatUiStore((state) => state.toggleChat);
+  const closeChat = useChatUiStore((state) => state.closeChat);
+  const selectConversation = useChatUiStore(
+    (state) => state.selectConversation
+  );
+
+  const isAuthenticated = Boolean(token);
+
+  const selectedMatch = useMemo(
+    () => matches.find((match) => match.id === selectedUserId),
+    [matches, selectedUserId]
+  );
+
+  const selectedMatchRequestId = selectedMatch
+    ? selectedMatch.matchId ?? selectedMatch.id
+    : null;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -40,73 +59,120 @@ export function ChatDock() {
   const [currentProfileId, setCurrentProfileId] = useState<number | null>(null);
 
   useEffect(() => {
+    if (!hasHydrated || !isAuthenticated) {
+      setCurrentProfileId(null);
+      return;
+    }
+
+    if (authUserId == null) {
+      setCurrentProfileId(null);
+      return;
+    }
+
+    const userId = authUserId;
+    let cancelled = false;
+
     async function loadCurrentProfile() {
-      const storedProfileId = localStorage.getItem(CURRENT_PROFILE_ID_KEY);
+      const profileIdKey = getCurrentProfileIdKey(userId);
+      const storedProfileId = localStorage.getItem(profileIdKey);
 
       if (storedProfileId) {
         setCurrentProfileId(Number(storedProfileId));
         return;
       }
 
-      if (!authUser?.id) {
+      try {
+        const profile = await getProfileByUserId(userId);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (profile) {
+          localStorage.setItem(profileIdKey, String(profile.id));
+          setCurrentProfileId(profile.id);
+          return;
+        }
+
         setCurrentProfileId(null);
-        return;
+      } catch (error) {
+        console.error("Błąd podczas pobierania profilu dla chatu:", error);
+
+        if (!cancelled) {
+          setCurrentProfileId(null);
+        }
       }
-
-      const profile = await getProfileByUserId(authUser.id);
-
-      if (profile) {
-        localStorage.setItem(CURRENT_PROFILE_ID_KEY, String(profile.id));
-        setCurrentProfileId(profile.id);
-        return;
-      }
-
-      setCurrentProfileId(null);
     }
 
-    if (isAuthenticated) {
-      loadCurrentProfile();
-    }
-  }, [authUser?.id, isAuthenticated]);
+    loadCurrentProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, hasHydrated, isAuthenticated]);
 
   useEffect(() => {
-    async function loadMessages() {
-      if (!selectedUserId || !selectedMatch) {
-        setMessages([]);
-        return;
-      }
+    if (!isOpen || selectedMatchRequestId == null) {
+      setMessages([]);
+      return;
+    }
 
+    const matchRequestId = selectedMatchRequestId;
+    let cancelled = false;
+
+    async function loadMessages() {
       try {
         setIsLoading(true);
-        const data = await getChatMessages(selectedMatch.matchId ?? selectedMatch.id);
-        setMessages(data);
+
+        const data = await getChatMessages(matchRequestId);
+
+        if (!cancelled) {
+          setMessages(data);
+        }
       } catch (error) {
         console.error("Błąd podczas pobierania wiadomości:", error);
-        setMessages([]);
+
+        if (!cancelled) {
+          setMessages([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     }
 
-    if (isOpen) {
-      loadMessages();
-    }
-  }, [isOpen, selectedUserId, selectedMatch]);
+    loadMessages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, selectedMatchRequestId]);
 
   const handleSend = async () => {
     const trimmedMessage = input.trim();
 
-    if (!trimmedMessage || !selectedUserId || !selectedMatch || !currentProfileId) {
+    if (
+      !trimmedMessage ||
+      selectedUserId == null ||
+      selectedMatchRequestId == null ||
+      currentProfileId == null
+    ) {
       return;
     }
 
+    const matchRequestId = selectedMatchRequestId;
+    const senderProfileId = currentProfileId;
+
     try {
       setIsSending(true);
+
       const newMessage = await sendChatMessage(
-        selectedMatch.matchId ?? selectedMatch.id,
-        currentProfileId,
+        matchRequestId,
+        senderProfileId,
         trimmedMessage
       );
+
       setMessages((prev) => [...prev, newMessage]);
       setInput("");
     } catch (error) {
@@ -116,34 +182,52 @@ export function ChatDock() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!hasHydrated || !isAuthenticated) {
     return null;
   }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {!isOpen ? (
-        <Button onClick={toggleChat} className="h-12 rounded-full px-5 shadow-xl">
+        <Button
+          type="button"
+          onClick={toggleChat}
+          className="h-13 rounded-full px-5 font-bold shadow-2xl shadow-primary/20 ring-1 ring-primary/20"
+        >
           <MessageCircle className="size-4" />
           Chat
+          {matches.length > 0 ? (
+            <span className="ml-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-xs">
+              {matches.length}
+            </span>
+          ) : null}
         </Button>
       ) : (
-        <Card className="w-[min(360px,calc(100vw-2rem))] overflow-hidden border-0 bg-card/98 shadow-2xl ring-1 ring-border/70">
-          <CardHeader className="relative border-b bg-background/70 p-4 pr-14">
-            <div>
-              <p className="font-semibold">Chat</p>
-              <p className="text-xs text-muted-foreground">
-                {selectedMatch
-                  ? `Rozmowa z ${selectedMatch.username}`
-                  : "Wybierz rozmowę"}
-              </p>
+        <Card className="w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-[1.75rem] border-0 bg-card/98 shadow-2xl ring-1 ring-border/70 backdrop-blur">
+          <CardHeader className="relative border-b bg-muted/25 p-4 pr-14">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <MessageCircle className="size-5" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-base font-black tracking-[-0.025em]">
+                  {selectedMatch ? selectedMatch.username : "Chat"}
+                </p>
+                <p className="truncate text-xs text-foreground/60">
+                  {selectedMatch
+                    ? "Rozmowa po dopasowaniu"
+                    : "Wybierz rozmowę z listy"}
+                </p>
+              </div>
             </div>
 
             <Button
+              type="button"
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               onClick={closeChat}
-              className="absolute right-3 top-3"
+              className="absolute right-3 top-3 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="Zamknij okno czatu"
             >
               <X className="size-4" />
@@ -151,96 +235,154 @@ export function ChatDock() {
           </CardHeader>
 
           {!selectedUserId ? (
-            <CardContent className="max-h-[420px] space-y-2 overflow-y-auto p-3">
+            <CardContent className="max-h-[430px] space-y-3 overflow-y-auto p-3">
               {matches.length === 0 ? (
-                <div className="rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
-                  Nie masz jeszcze żadnych rozmów.
+                <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed bg-muted/20 p-6 text-center">
+                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Sparkles className="size-5" />
+                  </div>
+
+                  <div>
+                    <p className="font-extrabold tracking-[-0.02em]">
+                      Nie masz jeszcze rozmów
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-foreground/60">
+                      Rozmowy pojawią się po wzajemnym dopasowaniu.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 matches.map((match) => (
                   <button
                     key={match.id}
+                    type="button"
                     onClick={() => selectConversation(match.id)}
-                    className="flex w-full items-center gap-3 rounded-2xl border bg-background/60 p-3 text-left transition hover:bg-muted/50"
+                    className="group flex w-full items-center gap-3 rounded-3xl border bg-background/70 p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:shadow-sm"
                   >
-                    <Avatar className="size-10">
-                      <AvatarFallback className="bg-primary/10 text-primary">
+                    <Avatar className="size-11 border-4 border-background shadow-sm">
+                      <AvatarFallback className="bg-primary/10 text-base font-black text-primary">
                         {match.username.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{match.username}</p>
-                      <p className="truncate text-sm text-muted-foreground">
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-extrabold tracking-[-0.015em]">
+                          {match.username}
+                        </p>
+
+                        <Badge
+                          variant="accent"
+                          className="hidden rounded-full px-2 py-0 text-[10px] sm:inline-flex"
+                        >
+                          match
+                        </Badge>
+                      </div>
+
+                      <p className="mt-0.5 truncate text-sm text-foreground/60">
                         {match.interests.join(", ") || "Rozpocznij rozmowę"}
                       </p>
                     </div>
+
+                    <MessageCircle className="size-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
                   </button>
                 ))
               )}
             </CardContent>
           ) : (
-            <div className="flex h-[460px] flex-col">
-              <div className="border-b px-4 py-3">
+            <div className="flex h-[480px] flex-col">
+              <div className="border-b bg-background/50 px-4 py-3">
                 <button
+                  type="button"
                   onClick={() => selectConversation(null)}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center gap-2 rounded-full text-sm font-bold text-foreground/65 transition hover:text-foreground"
                 >
+                  <ArrowLeft className="size-4" />
                   Wróć do listy rozmów
                 </button>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto p-4">
+              <div className="flex-1 space-y-3 overflow-y-auto bg-background/35 p-4">
                 {isLoading ? (
-                  <p className="text-sm text-muted-foreground">
-                    Ładowanie wiadomości...
-                  </p>
+                  <div className="space-y-3">
+                    <div className="h-10 w-2/3 animate-pulse rounded-3xl bg-muted" />
+                    <div className="ml-auto h-10 w-1/2 animate-pulse rounded-3xl bg-muted" />
+                    <div className="h-10 w-3/5 animate-pulse rounded-3xl bg-muted" />
+                  </div>
                 ) : !currentProfileId ? (
-                  <p className="text-sm text-red-500">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
                     Najpierw utwórz profil, żeby wysyłać wiadomości.
-                  </p>
+                  </div>
                 ) : messages.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Brak wiadomości. Rozpocznij rozmowę.
-                  </p>
+                  <div className="grid h-full place-items-center text-center">
+                    <div className="max-w-[260px]">
+                      <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <MessageCircle className="size-5" />
+                      </div>
+
+                      <p className="font-extrabold tracking-[-0.02em]">
+                        Rozpocznij rozmowę
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-foreground/60">
+                        Napisz pierwszą wiadomość i nawiąż kontakt.
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   messages.map((message) => {
-                    const isMine = message.senderId === String(currentProfileId);
+                    const isMine =
+                      String(message.senderId) === String(currentProfileId);
 
                     return (
                       <div
                         key={message.id}
-                        className={`max-w-[85%] rounded-3xl px-4 py-2 text-sm shadow-sm ${
-                          isMine
-                            ? "ml-auto rounded-br-md bg-primary text-primary-foreground"
-                            : "rounded-bl-md bg-muted text-foreground"
+                        className={`flex ${
+                          isMine ? "justify-end" : "justify-start"
                         }`}
                       >
-                        {message.text}
+                        <div
+                          className={`max-w-[85%] rounded-[1.35rem] px-4 py-2.5 text-sm leading-6 shadow-sm ${
+                            isMine
+                              ? "rounded-br-md bg-primary text-primary-foreground"
+                              : "rounded-bl-md bg-card text-foreground ring-1 ring-border/70"
+                          }`}
+                        >
+                          {message.text}
+                        </div>
                       </div>
                     );
                   })
                 )}
               </div>
 
-              <div className="flex gap-2 border-t bg-background/80 p-3">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Napisz wiadomość..."
-                  disabled={isSending}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSend();
+              <div className="border-t bg-card p-3">
+                <div className="flex gap-2">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Napisz wiadomość..."
+                    disabled={isSending}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSend();
+                      }
+                    }}
+                    className="h-11 rounded-full px-4"
+                  />
+
+                  <Button
+                    type="button"
+                    onClick={handleSend}
+                    disabled={
+                      isSending || !currentProfileId || !input.trim()
                     }
-                  }}
-                />
-                <Button
-                  onClick={handleSend}
-                  disabled={isSending || !currentProfileId}
-                  size="icon"
-                >
-                  <Send className="size-4" />
-                </Button>
+                    size="icon"
+                    className="size-11 shrink-0 rounded-full shadow-md shadow-primary/20"
+                    aria-label="Wyślij wiadomość"
+                  >
+                    <Send className="size-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}

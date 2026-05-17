@@ -16,16 +16,41 @@ function getSystemTheme(): Theme {
     : "light";
 }
 
+function getSavedTheme(): Theme | null {
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+
+  if (savedTheme === "light" || savedTheme === "dark") {
+    return savedTheme;
+  }
+
+  return null;
+}
+
 export function ThemeInitializer() {
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const savedTheme = getSavedTheme();
 
-    if (savedTheme === "light" || savedTheme === "dark") {
+    if (savedTheme) {
       applyTheme(savedTheme);
       return;
     }
 
     applyTheme(getSystemTheme());
+
+    const handleSystemThemeChange = () => {
+      const currentSavedTheme = getSavedTheme();
+
+      if (!currentSavedTheme) {
+        applyTheme(getSystemTheme());
+      }
+    };
+
+    mediaQuery.addEventListener("change", handleSystemThemeChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    };
   }, []);
 
   return null;

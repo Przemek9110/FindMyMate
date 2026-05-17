@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import {
+  ImagePlus,
   KeyRound,
   Mail,
   Monitor,
   Moon,
   Palette,
-  ImagePlus,
+  RefreshCcw,
+  Settings,
+  ShieldCheck,
   Sun,
   Trash2,
   User,
@@ -30,8 +33,9 @@ import {
   createInterest,
   createProfile,
   getInterests,
-  getProfileByUserId,
+  getProfile,
   updateProfile,
+  uploadProfilePhoto,
   type Profile,
 } from "@/lib/api/profile";
 import { useAuthStore } from "@/store/authStore";
@@ -61,12 +65,12 @@ const sections: {
   {
     id: "profile",
     label: "Profil",
-    description: "Opis i zainteresowania",
+    description: "Opis, zdjęcie i zainteresowania",
     icon: User,
   },
   {
     id: "account",
-    label: "Zmień dane",
+    label: "Dane konta",
     description: "Login, e-mail i hasło",
     icon: KeyRound,
   },
@@ -80,13 +84,22 @@ const sections: {
 
 export default function SettingsPage() {
   const authUser = useAuthStore((state) => state.user);
-  const [activeSection, setActiveSection] = useState<SettingsSection>("profile");
+  const [activeSection, setActiveSection] =
+    useState<SettingsSection>("profile");
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+
+  const showProfileSuccess = (message: string) => {
+    setProfileSuccess(message);
+    window.setTimeout(() => setProfileSuccess(null), 3000);
+  };
 
   const setLightTheme = () => {
     window.localStorage.setItem(THEME_STORAGE_KEY, "light");
@@ -116,28 +129,34 @@ export default function SettingsPage() {
 
       setProfilePhoto(getProfilePhoto(authUser.id));
 
-      const data = await getProfileByUserId(authUser.id);
+      const data = await getProfile();
 
-      if (data) {
-        localStorage.setItem(CURRENT_PROFILE_ID_KEY, String(data.id));
-        setProfile(data);
-        return;
-      }
+      localStorage.setItem(CURRENT_PROFILE_ID_KEY, String(data.id));
+      setProfile(data);
+    } catch (error) {
+      console.error("Błąd podczas pobierania profilu:", error);
 
       localStorage.removeItem(CURRENT_PROFILE_ID_KEY);
-      setProfile({
-        id: 0,
-        user_id: Number(authUser.id),
-        display_name: authUser.username,
-        username: authUser.username,
-        displayName: authUser.username,
-        age: 18,
-        bio: "",
-        city: "",
-        interests: [],
-      });
-    } catch {
-      setProfileError("Nie udało się pobrać profilu.");
+
+      if (authUser?.id) {
+        setProfile({
+          id: 0,
+          user_id: Number(authUser.id),
+          display_name: authUser.username,
+          username: authUser.username,
+          displayName: authUser.username,
+          age: 18,
+          bio: "",
+          city: "",
+          interests: [],
+        });
+      } else {
+        setProfile(null);
+      }
+
+      setProfileError(
+        "Nie udało się pobrać profilu. Możesz utworzyć nowy profil."
+      );
     } finally {
       setIsLoadingProfile(false);
     }
@@ -151,7 +170,14 @@ export default function SettingsPage() {
     let availableInterests = await getInterests();
 
     for (const interestName of interestNames) {
-      const normalizedName = interestName.toLowerCase();
+      const trimmedName = interestName.trim();
+
+      if (!trimmedName) {
+        continue;
+      }
+
+      const normalizedName = trimmedName.toLowerCase();
+
       const existingInterest = availableInterests.find(
         (interest) => interest.name.toLowerCase() === normalizedName
       );
@@ -160,7 +186,7 @@ export default function SettingsPage() {
 
       if (!interestId) {
         try {
-          const createdInterest = await createInterest(interestName);
+          const createdInterest = await createInterest(trimmedName);
           interestId = createdInterest.id;
           availableInterests = [...availableInterests, createdInterest];
         } catch {
@@ -175,7 +201,7 @@ export default function SettingsPage() {
         try {
           await assignInterest(profileId, interestId);
         } catch {
-          // Backend returns 400 when this interest is already assigned.
+          // Backend może zwracać 400, jeśli relacja już istnieje.
         }
       }
     }
@@ -206,8 +232,6 @@ export default function SettingsPage() {
         localStorage.setItem(CURRENT_PROFILE_ID_KEY, String(profileId));
       }
 
-      await saveInterests(profileId, updatedProfile.interests);
-
       const data = await updateProfile({
         ...updatedProfile,
         id: profileId,
@@ -216,20 +240,35 @@ export default function SettingsPage() {
         displayName: updatedProfile.username,
       });
 
-      setProfile(data);
-      setProfileSuccess("Profil zapisany");
-      setTimeout(() => setProfileSuccess(null), 3000);
-    } catch {
+      await saveInterests(profileId, updatedProfile.interests);
+
+      setProfile({
+        ...data,
+        interests: updatedProfile.interests,
+      });
+
+      showProfileSuccess("Profil zapisany.");
+    } catch (error) {
+      console.error("Błąd podczas zapisywania profilu:", error);
       setProfileError("Nie udało się zapisać profilu.");
     } finally {
       setIsSavingProfile(false);
     }
   };
 
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
 
+    event.target.value = "";
+
     if (!file || !authUser?.id) {
+      return;
+    }
+
+    if (!profile?.id) {
+      setProfileError("Najpierw zapisz profil, a dopiero potem dodaj zdjęcie.");
       return;
     }
 
@@ -238,23 +277,38 @@ export default function SettingsPage() {
       return;
     }
 
-    const reader = new FileReader();
+    try {
+      setIsUploadingPhoto(true);
+      setProfileError(null);
+      setProfileSuccess(null);
 
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : null;
+      await uploadProfilePhoto(profile.id, file);
 
-      if (!result) {
-        setProfileError("Nie udało się wczytać zdjęcia.");
-        return;
-      }
+      const reader = new FileReader();
 
-      saveProfilePhoto(authUser.id, result);
-      setProfilePhoto(result);
-      setProfileSuccess("Zdjęcie profilu zapisane");
-      setTimeout(() => setProfileSuccess(null), 3000);
-    };
+      reader.onload = () => {
+        const result = typeof reader.result === "string" ? reader.result : null;
 
-    reader.readAsDataURL(file);
+        if (!result) {
+          setProfileError(
+            "Zdjęcie zostało wysłane, ale nie udało się pokazać podglądu."
+          );
+          return;
+        }
+
+        saveProfilePhoto(authUser.id, result);
+        setProfilePhoto(result);
+      };
+
+      reader.readAsDataURL(file);
+
+      showProfileSuccess("Zdjęcie profilu wysłane do backendu.");
+    } catch (error) {
+      console.error("Błąd podczas wysyłania zdjęcia:", error);
+      setProfileError("Nie udało się wysłać zdjęcia profilu.");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   const handleRemovePhoto = () => {
@@ -264,42 +318,60 @@ export default function SettingsPage() {
 
     removeProfilePhoto(authUser.id);
     setProfilePhoto(null);
-    setProfileSuccess("Zdjęcie profilu usunięte");
-    setTimeout(() => setProfileSuccess(null), 3000);
+    showProfileSuccess(
+      "Zdjęcie usunięte z podglądu. Backend nie ma jeszcze obsługi usuwania zdjęcia."
+    );
   };
 
-  const renderActiveSection = () => {
-    if (activeSection === "profile") {
-      return (
-        <div className="space-y-4">
-          {profileError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
-              {profileError}
-            </div>
-          ) : null}
+  const renderProfileSection = () => {
+    return (
+      <div className="space-y-5">
+        {profileError ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 shadow-sm dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+            {profileError}
+          </div>
+        ) : null}
 
-          {profileSuccess ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
-              {profileSuccess}
-            </div>
-          ) : null}
+        {profileSuccess ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
+            {profileSuccess}
+          </div>
+        ) : null}
 
-          {isLoadingProfile ? (
-            <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
-              <CardContent className="p-6 text-sm text-muted-foreground">
-                Ładowanie profilu...
-              </CardContent>
-            </Card>
-          ) : profile ? (
-            <>
-              <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
-                <CardHeader>
-                  <CardTitle>Zdjęcie profilu</CardTitle>
-                  <CardDescription>
-                    Zdjęcie jest tymczasowo zapisywane lokalnie w przeglądarce.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        {isLoadingProfile ? (
+          <Card className="border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="size-12 animate-pulse rounded-2xl bg-muted" />
+              <div>
+                <p className="font-bold">Ładowanie profilu...</p>
+                <p className="mt-1 text-sm text-foreground/60">
+                  Pobieramy Twoje dane...
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : profile ? (
+          <>
+            <Card className="overflow-hidden border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+              <CardHeader className="border-b bg-muted/25 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-2xl font-black tracking-[-0.035em]">
+                      Zdjęcie profilu
+                    </CardTitle>
+                    <CardDescription className="mt-2 text-sm leading-6 text-foreground/65">
+                      Dodaj zdjęcie widoczne w profilu.
+                    </CardDescription>
+                  </div>
+
+                  <div className="hidden size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:flex">
+                    <ImagePlus className="size-6" />
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
                   <Avatar className="size-24 border-4 border-background shadow-md">
                     {profilePhoto ? (
                       <AvatarImage
@@ -307,86 +379,129 @@ export default function SettingsPage() {
                         alt={`Zdjęcie profilu ${profile.username}`}
                       />
                     ) : null}
-                    <AvatarFallback className="bg-primary text-2xl text-primary-foreground">
+
+                    <AvatarFallback className="bg-primary text-3xl font-black text-primary-foreground">
                       {profile.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className="flex flex-wrap gap-3">
-                    <Button type="button" variant="outline" asChild>
-                      <Label htmlFor="profile-photo" className="cursor-pointer">
-                        <ImagePlus className="size-4" />
-                        Dodaj zdjęcie
-                      </Label>
-                    </Button>
-                    <Input
-                      id="profile-photo"
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                    />
-                    {profilePhoto ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleRemovePhoto}
-                      >
-                        <Trash2 className="size-4" />
-                        Usuń zdjęcie
-                      </Button>
-                    ) : null}
+                  <div>
+                    <p className="text-lg font-extrabold tracking-[-0.02em]">
+                      {profile.username}
+                    </p>
+                    <p className="mt-1 text-sm text-foreground/60">
+                      {profilePhoto
+                        ? "Zdjęcie jest ustawione."
+                        : "Nie masz jeszcze zdjęcia profilu."}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              <ProfileForm
-                profile={profile}
-                onSave={handleSaveProfile}
-                onCancel={loadProfile}
-                isSaving={isSavingProfile}
-              />
-            </>
-          ) : (
-            <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
-              <CardContent className="p-6 text-sm text-muted-foreground">
-                Nie udało się przygotować formularza profilu.
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    asChild
+                    disabled={isUploadingPhoto || !profile.id}
+                    className="h-11 rounded-full"
+                  >
+                    <Label htmlFor="profile-photo" className="cursor-pointer">
+                      <ImagePlus className="size-4" />
+                      {isUploadingPhoto ? "Wysyłanie..." : "Dodaj zdjęcie"}
+                    </Label>
+                  </Button>
+
+                  <Input
+                    id="profile-photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                    disabled={isUploadingPhoto || !profile.id}
+                  />
+
+                  {profilePhoto ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleRemovePhoto}
+                      disabled={isUploadingPhoto}
+                      className="h-11 rounded-full"
+                    >
+                      <Trash2 className="size-4" />
+                      Usuń zdjęcie
+                    </Button>
+                  ) : null}
+                </div>
               </CardContent>
             </Card>
-          )}
-        </div>
-      );
-    }
 
-    if (activeSection === "account") {
-      return (
-        <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
-          <CardHeader>
-            <CardTitle>Dane konta</CardTitle>
-            <CardDescription>
-              Backend nie ma jeszcze endpointów zmiany loginu, e-maila ani hasła,
-              więc pola są przygotowane wizualnie na kolejny etap.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Adres e-mail</Label>
+            <ProfileForm
+              profile={profile}
+              onSave={handleSaveProfile}
+              onCancel={loadProfile}
+              isSaving={isSavingProfile}
+            />
+          </>
+        ) : (
+          <Card className="border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+            <CardContent className="p-6 text-sm text-foreground/65">
+              Nie udało się przygotować formularza profilu.
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  const renderAccountSection = () => {
+    return (
+      <Card className="overflow-hidden border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+        <CardHeader className="border-b bg-muted/25 p-6">
+          <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <KeyRound className="size-6" />
+          </div>
+
+          <CardTitle className="text-2xl font-black tracking-[-0.035em]">
+            Dane konta
+          </CardTitle>
+
+          <CardDescription className="text-sm leading-6 text-foreground/65">
+            Backend nie ma jeszcze endpointów zmiany loginu, e-maila ani hasła,
+            więc pola są przygotowane wizualnie na kolejny etap.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="grid gap-5 p-6">
+          <div className="grid gap-2">
+            <Label htmlFor="email">Adres e-mail</Label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="email"
                 value={authUser?.email ?? ""}
                 disabled
                 onChange={() => undefined}
+                className="h-11 pl-9"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="username">Login</Label>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="username">Login</Label>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="username"
                 value={authUser?.username ?? ""}
                 disabled
                 onChange={() => undefined}
+                className="h-11 pl-9"
               />
             </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="current-password">Aktualne hasło</Label>
               <Input
@@ -394,8 +509,10 @@ export default function SettingsPage() {
                 type="password"
                 placeholder="••••••••"
                 disabled
+                className="h-11"
               />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="new-password">Nowe hasło</Label>
               <Input
@@ -403,37 +520,66 @@ export default function SettingsPage() {
                 type="password"
                 placeholder="••••••••"
                 disabled
+                className="h-11"
               />
             </div>
-            <Button type="button" disabled className="w-fit">
-              <Mail className="size-4" />
-              Zapisz dane
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
+          </div>
 
+          <Button type="button" disabled className="h-11 w-fit rounded-full">
+            <Mail className="size-4" />
+            Zapisz dane
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderSystemSection = () => {
     return (
-      <Card className="border-0 bg-card/95 shadow-sm ring-1 ring-border/70">
-        <CardHeader>
-          <CardTitle>Systemowe</CardTitle>
-          <CardDescription>
+      <Card className="overflow-hidden border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+        <CardHeader className="border-b bg-muted/25 p-6">
+          <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Palette className="size-6" />
+          </div>
+
+          <CardTitle className="text-2xl font-black tracking-[-0.035em]">
+            Systemowe
+          </CardTitle>
+
+          <CardDescription className="text-sm leading-6 text-foreground/65">
             Domyślnie aplikacja może dopasować się do ustawień systemu, ale
             możesz wymusić jasny albo ciemny motyw.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3">
-          <Button type="button" variant="outline" onClick={setSystemTheme}>
-            <Monitor className="size-4" />
+
+        <CardContent className="grid gap-3 p-6 sm:grid-cols-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={setSystemTheme}
+            className="h-24 flex-col rounded-2xl"
+          >
+            <Monitor className="size-5" />
             System
           </Button>
-          <Button type="button" variant="outline" onClick={setLightTheme}>
-            <Sun className="size-4" />
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={setLightTheme}
+            className="h-24 flex-col rounded-2xl"
+          >
+            <Sun className="size-5" />
             Jasny
           </Button>
-          <Button type="button" variant="outline" onClick={setDarkTheme}>
-            <Moon className="size-4" />
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={setDarkTheme}
+            className="h-24 flex-col rounded-2xl"
+          >
+            <Moon className="size-5" />
             Ciemny
           </Button>
         </CardContent>
@@ -441,49 +587,105 @@ export default function SettingsPage() {
     );
   };
 
+  const renderActiveSection = () => {
+    if (activeSection === "profile") {
+      return renderProfileSection();
+    }
+
+    if (activeSection === "account") {
+      return renderAccountSection();
+    }
+
+    return renderSystemSection();
+  };
+
   return (
     <ProtectedRoute>
-      <div className="mx-auto max-w-5xl space-y-6">
-        <PageHeader
-          eyebrow="Ustawienia"
-          title="Preferencje konta"
-          description="Zarządzaj profilem, danymi konta i ustawieniami systemowymi."
-        />
+      <section className="mx-auto max-w-6xl space-y-8 py-4 sm:py-8">
+        <div className="relative overflow-hidden rounded-[2rem] border bg-card px-6 py-8 shadow-sm ring-1 ring-border/70 sm:px-8">
+          <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 left-10 size-72 rounded-full bg-accent/60 blur-3xl" />
 
-        <div className="grid gap-6 md:grid-cols-[260px_1fr]">
-          <aside className="space-y-2">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              const isActive = activeSection === section.id;
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <PageHeader
+              eyebrow="Ustawienia"
+              title="Preferencje konta"
+              description="Zarządzaj profilem, zdjęciem, danymi konta i ustawieniami systemowymi."
+            />
 
-              return (
-                <button
-                  key={section.id}
-                  type="button"
-                  onClick={() => setActiveSection(section.id)}
-                  className={`flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition ${
-                    isActive
-                      ? "border-primary/40 bg-primary/10 text-foreground"
-                      : "bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    <span className="block text-sm font-medium">
-                      {section.label}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {section.description}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
+            <Button
+              type="button"
+              onClick={loadProfile}
+              variant="outline"
+              className="h-11 rounded-full px-5"
+              disabled={isLoadingProfile}
+            >
+              <RefreshCcw className="size-4" />
+              Odśwież profil
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          <aside className="space-y-3">
+            <Card className="border-0 bg-card/95 shadow-md ring-1 ring-border/70">
+              <CardContent className="space-y-2 p-3">
+                {sections.map((section) => {
+                  const Icon = section.icon;
+                  const isActive = activeSection === section.id;
+
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => setActiveSection(section.id)}
+                      className={`group flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition ${
+                        isActive
+                          ? "border-primary/40 bg-primary/10 text-foreground shadow-sm"
+                          : "border-transparent bg-transparent text-foreground/65 hover:bg-muted/60 hover:text-foreground"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl transition ${
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-foreground/60 group-hover:bg-primary/10 group-hover:text-primary"
+                        }`}
+                      >
+                        <Icon className="size-4" />
+                      </span>
+
+                      <span className="min-w-0">
+                        <span className="block text-sm font-extrabold tracking-[-0.015em]">
+                          {section.label}
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-5 text-foreground/55">
+                          {section.description}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 bg-primary/5 shadow-sm ring-1 ring-primary/10">
+              <CardContent className="flex gap-3 p-4">
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <ShieldCheck className="size-4" />
+                </span>
+
+                <p className="text-sm leading-6 text-foreground/68">
+                  Najpierw uzupełnij profil — to on wpływa na odkrywanie i
+                  dopasowania.
+                </p>
+              </CardContent>
+            </Card>
           </aside>
 
-          <section>{renderActiveSection()}</section>
+          <section className="min-w-0">{renderActiveSection()}</section>
         </div>
-      </div>
+      </section>
     </ProtectedRoute>
   );
 }
